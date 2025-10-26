@@ -3,13 +3,128 @@
  * A basic worker for the Bookmark-AI service
  */
 
+import Anthropic from '@anthropic-ai/sdk';
+
 export interface Env {
-  // Define your environment variables here
-  // Example: API_KEY: string;
+  ANTHROPIC_API_KEY: string;
+  INSTAPAPER_USERNAME: string;
+  INSTAPAPER_PASSWORD: string;
+}
+
+/**
+ * Analyzes a bookmark URL using Claude AI
+ */
+async function analyzeBookmark(url: string, apiKey: string): Promise<{
+  isArticle: boolean;
+  title: string;
+  summary: string;
+  categories: string[];
+  contentType: string;
+}> {
+  const anthropic = new Anthropic({
+    apiKey: apiKey,
+  });
+
+  const prompt = `Analyze this bookmark URL and provide:
+1. Whether this is a web article/blog post (true) or something else like a tool, homepage, documentation, etc. (false)
+2. What type of content this is (e.g., "article", "tool", "documentation", "homepage", "video", "repository", etc.)
+3. A suggested title/name for the bookmark
+4. A brief summary (1-2 sentences) of what the page is about
+5. 2-3 relevant categories or tags
+
+URL: ${url}
+
+Please respond in JSON format:
+{
+  "isArticle": true or false,
+  "contentType": "article" or "tool" or "documentation" etc.,
+  "title": "Title here",
+  "summary": "Summary here",
+  "categories": ["category1", "category2", "category3"]
+}`;
+
+  const message = await anthropic.messages.create({
+    model: 'claude-3-5-sonnet-20241022',
+    max_tokens: 1024,
+    messages: [
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ],
+  });
+
+  // Extract the text content from the response
+  const textContent = message.content.find((block) => block.type === 'text');
+  if (!textContent || textContent.type !== 'text') {
+    throw new Error('No text content in Claude response');
+  }
+
+  // Parse the JSON response
+  const jsonMatch = textContent.text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error('Could not find JSON in Claude response');
+  }
+
+  return JSON.parse(jsonMatch[0]);
+}
+
+/**
+ * Saves an article to Instapaper using the Simple API
+ */
+async function saveToInstapaper(
+  url: string,
+  title: string,
+  username: string,
+  password: string
+): Promise<{ success: boolean; bookmarkId?: number; error?: string }> {
+  const instapaperUrl = 'https://www.instapaper.com/api/add';
+
+  // Prepare the request body
+  const params = new URLSearchParams({
+    url: url,
+    title: title,
+  });
+
+  // Use HTTP Basic Authentication
+  const auth = btoa(`${username}:${password}`);
+
+  try {
+    const response = await fetch(instapaperUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${auth}`,
+      },
+      body: params.toString(),
+    });
+
+    if (response.status === 201) {
+      // Successfully created
+      const bookmarkId = parseInt(await response.text(), 10);
+      return { success: true, bookmarkId };
+    } else if (response.status === 200) {
+      // Already exists
+      return { success: true };
+    } else if (response.status === 403) {
+      return { success: false, error: 'Invalid Instapaper credentials' };
+    } else if (response.status === 400) {
+      return { success: false, error: 'Invalid request parameters' };
+    } else if (response.status === 500) {
+      return { success: false, error: 'Instapaper service error' };
+    } else {
+      return { success: false, error: `Unexpected status: ${response.status}` };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
 }
 
 export default {
-  async fetch(request: Request, _env: Env, _ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     // Handle CORS preflight requests
@@ -25,7 +140,7 @@ export default {
         endpoints: {
           '/': 'This help message',
           '/health': 'Health check endpoint',
-          '/api/bookmarks': 'Bookmark API (coming soon)'
+          '/api/bookmarks': 'POST - Submit a bookmark URL for processing'
         }
       }), {
         headers: {
@@ -45,6 +160,132 @@ export default {
           ...getCORSHeaders()
         }
       });
+    }
+
+    if (url.pathname === '/api/bookmarks') {
+      if (request.method !== 'POST') {
+        return new Response(JSON.stringify({
+          error: 'Method Not Allowed',
+          message: 'This endpoint only accepts POST requests'
+        }), {
+          status: 405,
+          headers: {
+            'Content-Type': 'application/json',
+            ...getCORSHeaders()
+          }
+        });
+      }
+
+      try {
+        const body = await request.json() as { url?: string };
+
+        if (!body.url) {
+          return new Response(JSON.stringify({
+            error: 'Bad Request',
+            message: 'Missing required property: url'
+          }), {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...getCORSHeaders()
+            }
+          });
+        }
+
+        // Validate URL format
+        try {
+          new URL(body.url);
+        } catch {
+          return new Response(JSON.stringify({
+            error: 'Bad Request',
+            message: 'Invalid URL format'
+          }), {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...getCORSHeaders()
+            }
+          });
+        }
+
+        // Check if API key is configured
+        if (!env.ANTHROPIC_API_KEY) {
+          return new Response(JSON.stringify({
+            error: 'Internal Server Error',
+            message: 'API key not configured'
+          }), {
+            status: 500,
+            headers: {
+              'Content-Type': 'application/json',
+              ...getCORSHeaders()
+            }
+          });
+        }
+
+        // Process the bookmark URL with Claude AI
+        try {
+          const analysis = await analyzeBookmark(body.url, env.ANTHROPIC_API_KEY);
+
+          // Automatically save to Instapaper if this is an article
+          let instapaperResult = null;
+          if (analysis.isArticle && env.INSTAPAPER_USERNAME && env.INSTAPAPER_PASSWORD) {
+            instapaperResult = await saveToInstapaper(
+              body.url,
+              analysis.title,
+              env.INSTAPAPER_USERNAME,
+              env.INSTAPAPER_PASSWORD
+            );
+          }
+
+          return new Response(JSON.stringify({
+            success: true,
+            message: 'Bookmark analyzed successfully',
+            data: {
+              url: body.url,
+              isArticle: analysis.isArticle,
+              contentType: analysis.contentType,
+              title: analysis.title,
+              summary: analysis.summary,
+              categories: analysis.categories,
+              instapaper: instapaperResult ? {
+                saved: instapaperResult.success,
+                bookmarkId: instapaperResult.bookmarkId,
+                error: instapaperResult.error
+              } : null,
+              analyzedAt: new Date().toISOString()
+            }
+          }), {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+              ...getCORSHeaders()
+            }
+          });
+        } catch (error) {
+          return new Response(JSON.stringify({
+            error: 'Internal Server Error',
+            message: 'Failed to analyze bookmark',
+            details: error instanceof Error ? error.message : 'Unknown error'
+          }), {
+            status: 500,
+            headers: {
+              'Content-Type': 'application/json',
+              ...getCORSHeaders()
+            }
+          });
+        }
+      } catch (error) {
+        return new Response(JSON.stringify({
+          error: 'Bad Request',
+          message: 'Invalid JSON body'
+        }), {
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            ...getCORSHeaders()
+          }
+        });
+      }
     }
 
     // 404 for unknown routes

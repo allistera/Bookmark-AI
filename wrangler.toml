@@ -19,6 +19,17 @@ enabled = true
 # id = "your-kv-namespace-id"
 # preview_id = "your-preview-kv-namespace-id"
 
+# Environment Variables
+# Set secrets for production using wrangler:
+# wrangler secret put ANTHROPIC_API_KEY
+# wrangler secret put INSTAPAPER_USERNAME
+# wrangler secret put INSTAPAPER_PASSWORD
+#
+# For local development, create a .dev.vars file with:
+# ANTHROPIC_API_KEY=your-api-key-here
+# INSTAPAPER_USERNAME=your-instapaper-email@example.com
+# INSTAPAPER_PASSWORD=your-instapaper-password
+
 # Variable bindings (for environment-specific configuration)
 # [env.production.vars]
 # API_URL = "https://api.example.com"

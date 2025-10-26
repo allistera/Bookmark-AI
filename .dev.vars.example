@@ -1,0 +1,12 @@
+# Local Development Environment Variables
+# Copy this file to .dev.vars and fill in your actual values
+
+# Anthropic API Key
+# Get your API key from: https://console.anthropic.com/
+ANTHROPIC_API_KEY=your-anthropic-api-key-here
+
+# Instapaper Credentials
+# Your Instapaper account credentials for automatically saving articles
+# Sign up at: https://www.instapaper.com/
+INSTAPAPER_USERNAME=your-instapaper-email@example.com
+INSTAPAPER_PASSWORD=your-instapaper-password
