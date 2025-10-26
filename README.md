@@ -4,7 +4,7 @@ Use AI to Automatically Sort Bookmarks
 
 ## Overview
 
-This project contains a Cloudflare Worker that serves as the backend for the Bookmark-AI service. The worker uses Claude AI to automatically analyze bookmark URLs and extract metadata including title, summary, categories, and content type classification. For articles, it automatically generates an Instapaper URL to easily add them to your reading list. The worker is deployed automatically using GitHub Actions.
+This project contains a Cloudflare Worker that serves as the backend for the Bookmark-AI service. The worker uses Claude AI to automatically analyze bookmark URLs and extract metadata including title, summary, categories, and content type classification. For articles, it automatically saves them to your Instapaper reading list. The worker is deployed automatically using GitHub Actions.
 
 ## Project Structure
 
@@ -26,6 +26,7 @@ This project contains a Cloudflare Worker that serves as the backend for the Boo
 - npm or yarn
 - A Cloudflare account
 - An Anthropic API key (get one at https://console.anthropic.com/)
+- An Instapaper account (sign up at https://www.instapaper.com/)
 - Wrangler CLI (installed automatically with npm install)
 
 ## Local Development
@@ -40,12 +41,15 @@ This project contains a Cloudflare Worker that serves as the backend for the Boo
    cp .dev.vars.example .dev.vars
    ```
 
-   Edit `.dev.vars` and add your Anthropic API key:
+   Edit `.dev.vars` and add your credentials:
    ```
    ANTHROPIC_API_KEY=your-anthropic-api-key-here
+   INSTAPAPER_USERNAME=your-instapaper-email@example.com
+   INSTAPAPER_PASSWORD=your-instapaper-password
    ```
 
-   Get your API key from: https://console.anthropic.com/
+   - Get your Anthropic API key from: https://console.anthropic.com/
+   - Use your Instapaper account credentials from: https://www.instapaper.com/
 
 3. Start the development server:
    ```bash
@@ -84,7 +88,11 @@ Analyze a bookmark URL using Claude AI
     "title": "Example Article Title",
     "summary": "A brief summary of the article content.",
     "categories": ["technology", "web development"],
-    "instapaperUrl": "https://www.instapaper.com/hello2?url=https%3A%2F%2Fexample.com%2Farticle&title=Example%20Article%20Title",
+    "instapaper": {
+      "saved": true,
+      "bookmarkId": 1234567890,
+      "error": null
+    },
     "analyzedAt": "2025-10-26T08:56:01.509Z"
   }
 }
@@ -96,7 +104,7 @@ The API uses Claude AI to:
 - Generate a suggested title
 - Create a brief summary
 - Suggest relevant categories/tags
-- Generate an Instapaper URL for articles (null for non-articles)
+- **Automatically save articles to Instapaper** (when credentials are configured)
 
 ## Deployment
 
@@ -118,6 +126,13 @@ Add the following secrets to your GitHub repository (Settings > Secrets and vari
 3. `ANTHROPIC_API_KEY` - Your Anthropic API key for Claude AI
    - Get your API key from: https://console.anthropic.com/
    - This is required for the bookmark analysis feature
+
+4. `INSTAPAPER_USERNAME` - Your Instapaper account email
+   - Your Instapaper account email address
+
+5. `INSTAPAPER_PASSWORD` - Your Instapaper account password
+   - Your Instapaper account password
+   - This is required for automatically saving articles to Instapaper
 
 ### Manual Deployment
 

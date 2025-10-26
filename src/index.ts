@@ -7,6 +7,8 @@ import Anthropic from '@anthropic-ai/sdk';
 
 export interface Env {
   ANTHROPIC_API_KEY: string;
+  INSTAPAPER_USERNAME: string;
+  INSTAPAPER_PASSWORD: string;
 }
 
 /**
@@ -65,6 +67,60 @@ Please respond in JSON format:
   }
 
   return JSON.parse(jsonMatch[0]);
+}
+
+/**
+ * Saves an article to Instapaper using the Simple API
+ */
+async function saveToInstapaper(
+  url: string,
+  title: string,
+  username: string,
+  password: string
+): Promise<{ success: boolean; bookmarkId?: number; error?: string }> {
+  const instapaperUrl = 'https://www.instapaper.com/api/add';
+
+  // Prepare the request body
+  const params = new URLSearchParams({
+    url: url,
+    title: title,
+  });
+
+  // Use HTTP Basic Authentication
+  const auth = btoa(`${username}:${password}`);
+
+  try {
+    const response = await fetch(instapaperUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${auth}`,
+      },
+      body: params.toString(),
+    });
+
+    if (response.status === 201) {
+      // Successfully created
+      const bookmarkId = parseInt(await response.text(), 10);
+      return { success: true, bookmarkId };
+    } else if (response.status === 200) {
+      // Already exists
+      return { success: true };
+    } else if (response.status === 403) {
+      return { success: false, error: 'Invalid Instapaper credentials' };
+    } else if (response.status === 400) {
+      return { success: false, error: 'Invalid request parameters' };
+    } else if (response.status === 500) {
+      return { success: false, error: 'Instapaper service error' };
+    } else {
+      return { success: false, error: `Unexpected status: ${response.status}` };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
 }
 
 export default {
@@ -170,10 +226,16 @@ export default {
         try {
           const analysis = await analyzeBookmark(body.url, env.ANTHROPIC_API_KEY);
 
-          // Generate Instapaper URL if this is an article
-          const instapaperUrl = analysis.isArticle
-            ? `https://www.instapaper.com/hello2?url=${encodeURIComponent(body.url)}&title=${encodeURIComponent(analysis.title)}`
-            : null;
+          // Automatically save to Instapaper if this is an article
+          let instapaperResult = null;
+          if (analysis.isArticle && env.INSTAPAPER_USERNAME && env.INSTAPAPER_PASSWORD) {
+            instapaperResult = await saveToInstapaper(
+              body.url,
+              analysis.title,
+              env.INSTAPAPER_USERNAME,
+              env.INSTAPAPER_PASSWORD
+            );
+          }
 
           return new Response(JSON.stringify({
             success: true,
@@ -185,7 +247,11 @@ export default {
               title: analysis.title,
               summary: analysis.summary,
               categories: analysis.categories,
-              instapaperUrl: instapaperUrl,
+              instapaper: instapaperResult ? {
+                saved: instapaperResult.success,
+                bookmarkId: instapaperResult.bookmarkId,
+                error: instapaperResult.error
+              } : null,
               analyzedAt: new Date().toISOString()
             }
           }), {
