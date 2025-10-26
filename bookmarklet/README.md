@@ -6,9 +6,7 @@ This directory contains the bookmarklet scripts for Bookmark-AI.
 
 - **`bookmarklet-source.js`** - Readable, commented source code for the bookmarklet. Use this if you want to understand or modify the code.
 
-- **`bookmarklet-local.js`** - Ready-to-use bookmarklet configured for local development (`http://localhost:8787`). Copy the entire contents and paste into a bookmark's URL field.
-
-- **`bookmarklet-production.js`** - Template for production use. Replace `YOUR_WORKER_URL` with your deployed Cloudflare Worker URL (e.g., `https://bookmark-ai.your-username.workers.dev`), then copy and paste into a bookmark's URL field.
+- **`bookmarklet-production.js`** - Production bookmarklet. Replace `YOUR_WORKER_URL` with your deployed Cloudflare Worker URL (e.g., `https://bookmark-ai.your-username.workers.dev`), then copy and paste into a bookmark's URL field.
 
 ## Installation
 
@@ -22,8 +20,9 @@ This directory contains the bookmarklet scripts for Bookmark-AI.
    - Name it: `Analyze Bookmark`
 
 3. **Copy the bookmarklet code**:
-   - For local development: Copy the entire contents of `bookmarklet-local.js`
-   - For production: Copy `bookmarklet-production.js` and replace `YOUR_WORKER_URL` with your actual worker URL
+   - Open `bookmarklet-production.js` and copy the entire contents
+   - Replace `YOUR_WORKER_URL` with your deployed Cloudflare Worker URL
+   - Example: `https://bookmark-ai.your-username.workers.dev`
 
 4. **Paste into the bookmark URL field** and save
 

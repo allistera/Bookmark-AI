@@ -14,8 +14,7 @@ This project contains a Cloudflare Worker that serves as the backend for the Boo
 │   └── index.ts          # Main worker code
 ├── bookmarklet/
 │   ├── bookmarklet-source.js       # Readable bookmarklet source
-│   ├── bookmarklet-local.js        # Bookmarklet for local dev
-│   ├── bookmarklet-production.js   # Bookmarklet template for production
+│   ├── bookmarklet-production.js   # Production bookmarklet
 │   └── README.md                   # Bookmarklet documentation
 ├── .github/
 │   └── workflows/
@@ -128,8 +127,8 @@ A bookmarklet allows you to analyze the current webpage with a single click from
    - Name it: `Analyze Bookmark`
 
 3. **Copy the bookmarklet code** and paste into the URL field:
-   - **For local development**: Copy the contents of [`bookmarklet/bookmarklet-local.js`](bookmarklet/bookmarklet-local.js)
-   - **For production**: Copy [`bookmarklet/bookmarklet-production.js`](bookmarklet/bookmarklet-production.js) and replace `YOUR_WORKER_URL` with your deployed Cloudflare Worker URL
+   - Copy the contents of [`bookmarklet/bookmarklet-production.js`](bookmarklet/bookmarklet-production.js)
+   - Replace `YOUR_WORKER_URL` with your deployed Cloudflare Worker URL (e.g., `https://bookmark-ai.your-username.workers.dev`)
 
 4. **Save the bookmark**
 
@@ -137,8 +136,7 @@ A bookmarklet allows you to analyze the current webpage with a single click from
 
 The [`bookmarklet/`](bookmarklet/) directory contains:
 - **`bookmarklet-source.js`** - Readable source code with comments
-- **`bookmarklet-local.js`** - Ready for local development (http://localhost:8787)
-- **`bookmarklet-production.js`** - Template for production use
+- **`bookmarklet-production.js`** - Production bookmarklet (replace YOUR_WORKER_URL with your deployed URL)
 - **`README.md`** - Detailed instructions and customization guide
 
 ### Usage

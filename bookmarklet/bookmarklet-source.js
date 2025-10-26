@@ -4,18 +4,17 @@
  * This is the readable source code for the bookmarklet.
  * To use this as a bookmarklet, you need to:
  * 1. Minify the code
- * 2. Replace API_URL with your actual endpoint
+ * 2. Replace API_URL with your deployed Cloudflare Worker URL
  * 3. Prefix with 'javascript:'
  * 4. URL-encode if needed (though most browsers handle this)
  *
- * Or use the pre-built versions:
- * - bookmarklet-local.js (for http://localhost:8787)
+ * Or use the pre-built version:
  * - bookmarklet-production.js (template for your production URL)
  */
 
 (function() {
-    // Configuration - change this to your API endpoint
-    const API_URL = 'http://localhost:8787/api/bookmarks';
+    // Configuration - replace with your deployed Cloudflare Worker URL
+    const API_URL = 'YOUR_WORKER_URL/api/bookmarks';
 
     const currentUrl = window.location.href;
 
