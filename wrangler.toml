@@ -1,0 +1,27 @@
+name = "bookmark-ai"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# Uncomment to use a custom route
+# routes = [
+#   { pattern = "example.com/*", zone_name = "example.com" }
+# ]
+
+# Workers Logs
+# Docs: https://developers.cloudflare.com/workers/observability/logs/workers-logs/
+# Configuration: https://developers.cloudflare.com/workers/observability/logs/workers-logs/#enable-workers-logs
+[observability]
+enabled = true
+
+# Bind a KV Namespace (if needed in the future)
+# [[kv_namespaces]]
+# binding = "BOOKMARKS"
+# id = "your-kv-namespace-id"
+# preview_id = "your-preview-kv-namespace-id"
+
+# Variable bindings (for environment-specific configuration)
+# [env.production.vars]
+# API_URL = "https://api.example.com"
+
+# [env.staging.vars]
+# API_URL = "https://staging-api.example.com"
