@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "npm run lint:js && npm run lint:yaml",
+    "lint:js": "eslint . --ext .ts,.tsx",
+    "lint:yaml": "yamllint **/*.{yml,yaml}",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -24,6 +26,7 @@
     "@typescript-eslint/parser": "^6.21.0",
     "eslint": "^8.56.0",
     "typescript": "^5.3.3",
-    "wrangler": "^3.80.0"
+    "wrangler": "^3.80.0",
+    "yaml-lint": "^1.7.0"
   }
 }
