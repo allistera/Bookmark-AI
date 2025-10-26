@@ -26,18 +26,28 @@
     const modal = document.createElement('div');
     modal.style.cssText = 'background:white;border-radius:12px;padding:30px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);';
 
-    // Loading state
+    // Initial prompt with Todoist checkbox
     modal.innerHTML = `
-        <div style="text-align:center;">
-            <h2 style="color:#667eea;margin-bottom:20px;">Analyzing...</h2>
-            <div style="border:4px solid #f3f3f3;border-top:4px solid #667eea;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;margin:20px auto;"></div>
+        <div>
+            <h2 style="color:#667eea;margin-bottom:20px;">Analyze Bookmark</h2>
+            <p style="margin-bottom:15px;color:#666;">URL: <span style="word-break:break-all;font-size:0.9em;">${currentUrl}</span></p>
+
+            <div style="margin:20px 0;padding:15px;background:#f7fafc;border-radius:8px;">
+                <label style="display:flex;align-items:center;cursor:pointer;">
+                    <input type="checkbox" id="todoist-checkbox" style="margin-right:10px;width:18px;height:18px;cursor:pointer;">
+                    <span style="color:#333;">Create task in Todoist</span>
+                </label>
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:20px;">
+                <button id="analyze-btn" style="flex:1;background:#667eea;color:white;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;font-size:1em;">
+                    Analyze
+                </button>
+                <button onclick="this.closest('#bookmark-ai-overlay').remove()" style="flex:1;background:#e2e8f0;color:#333;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;font-size:1em;">
+                    Cancel
+                </button>
+            </div>
         </div>
-        <style>
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-        </style>
     `;
 
     overlay.appendChild(modal);
@@ -50,14 +60,35 @@
         }
     });
 
-    // Make API request
-    fetch(API_URL, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: currentUrl })
-    })
+    // Handle analyze button click
+    document.getElementById('analyze-btn').addEventListener('click', function() {
+        const createTodoistTask = document.getElementById('todoist-checkbox').checked;
+
+        // Show loading state
+        modal.innerHTML = `
+            <div style="text-align:center;">
+                <h2 style="color:#667eea;margin-bottom:20px;">Analyzing...</h2>
+                <div style="border:4px solid #f3f3f3;border-top:4px solid #667eea;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;margin:20px auto;"></div>
+            </div>
+            <style>
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            </style>
+        `;
+
+        // Make API request
+        fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                url: currentUrl,
+                createTodoistTask: createTodoistTask
+            })
+        })
     .then(response => response.json())
     .then(data => {
         if (data.success && data.data) {
@@ -69,6 +100,12 @@
                 result.instapaper?.error ?
                 '<span style="color:#ef4444;">✗ Error</span>' :
                 '<span style="color:#6b7280;">Not saved</span>';
+
+            const todoistStatus = result.todoist?.created ?
+                '<span style="color:#10b981;">✓ Task created</span>' :
+                result.todoist?.error ?
+                '<span style="color:#ef4444;">✗ Error: ' + result.todoist.error + '</span>' :
+                null;
 
             modal.innerHTML = `
                 <div>
@@ -112,6 +149,13 @@
                         <p style="margin:5px 0 0 0;">${instapaperStatus}</p>
                     </div>
 
+                    ${todoistStatus ? `
+                    <div style="margin-bottom:15px;">
+                        <strong style="color:#764ba2;">Todoist:</strong>
+                        <p style="margin:5px 0 0 0;">${todoistStatus}</p>
+                    </div>
+                    ` : ''}
+
                     <button onclick="this.closest('#bookmark-ai-overlay').remove()"
                             style="background:#667eea;color:white;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;width:100%;margin-top:20px;">
                         Close
@@ -122,16 +166,17 @@
             throw new Error(data.error || 'Failed to analyze');
         }
     })
-    .catch(error => {
-        modal.innerHTML = `
-            <div>
-                <h2 style="color:#ef4444;margin-bottom:20px;">Error</h2>
-                <p style="margin-bottom:20px;">${error.message}</p>
-                <button onclick="this.closest('#bookmark-ai-overlay').remove()"
-                        style="background:#ef4444;color:white;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;width:100%;">
-                    Close
-                </button>
-            </div>
-        `;
+        .catch(error => {
+            modal.innerHTML = `
+                <div>
+                    <h2 style="color:#ef4444;margin-bottom:20px;">Error</h2>
+                    <p style="margin-bottom:20px;">${error.message}</p>
+                    <button onclick="this.closest('#bookmark-ai-overlay').remove()"
+                            style="background:#ef4444;color:white;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;width:100%;">
+                        Close
+                    </button>
+                </div>
+            `;
+        });
     });
 })();

@@ -11,6 +11,7 @@ export interface Env {
   ANTHROPIC_API_KEY: string;
   INSTAPAPER_USERNAME: string;
   INSTAPAPER_PASSWORD: string;
+  TODOIST_API_TOKEN: string;
 }
 
 /**
@@ -187,6 +188,52 @@ async function saveToInstapaper(
   }
 }
 
+/**
+ * Creates a task in Todoist using the REST API v2
+ */
+async function createTodoistTask(
+  url: string,
+  title: string,
+  summary: string,
+  apiToken: string
+): Promise<{ success: boolean; taskId?: string; error?: string }> {
+  const todoistUrl = 'https://api.todoist.com/rest/v2/tasks';
+
+  // Create task content with URL and summary
+  const taskContent = `${title}\n${url}\n\n${summary}`;
+
+  try {
+    const response = await fetch(todoistUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiToken}`,
+      },
+      body: JSON.stringify({
+        content: taskContent,
+      }),
+    });
+
+    if (response.status === 200) {
+      // Successfully created
+      const taskData = await response.json() as { id: string };
+      return { success: true, taskId: taskData.id };
+    } else if (response.status === 403) {
+      return { success: false, error: 'Invalid Todoist API token' };
+    } else if (response.status === 400) {
+      return { success: false, error: 'Invalid request parameters' };
+    } else {
+      const errorText = await response.text();
+      return { success: false, error: `Unexpected status: ${response.status} - ${errorText}` };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -241,7 +288,7 @@ export default {
       }
 
       try {
-        const body = await request.json() as { url?: string };
+        const body = await request.json() as { url?: string; createTodoistTask?: boolean };
 
         if (!body.url) {
           return new Response(JSON.stringify({
@@ -301,6 +348,17 @@ export default {
             );
           }
 
+          // Create Todoist task if requested
+          let todoistResult = null;
+          if (body.createTodoistTask && env.TODOIST_API_TOKEN) {
+            todoistResult = await createTodoistTask(
+              body.url,
+              analysis.title,
+              analysis.summary,
+              env.TODOIST_API_TOKEN
+            );
+          }
+
           return new Response(JSON.stringify({
             success: true,
             message: 'Bookmark analyzed successfully',
@@ -316,6 +374,11 @@ export default {
                 saved: instapaperResult.success,
                 bookmarkId: instapaperResult.bookmarkId,
                 error: instapaperResult.error
+              } : null,
+              todoist: todoistResult ? {
+                created: todoistResult.success,
+                taskId: todoistResult.taskId,
+                error: todoistResult.error
               } : null,
               analyzedAt: new Date().toISOString()
             }

@@ -31,7 +31,8 @@ This project contains a Cloudflare Worker that serves as the backend for the Boo
 - npm or yarn
 - A Cloudflare account
 - An Anthropic API key (get one at https://console.anthropic.com/)
-- An Instapaper account (sign up at https://www.instapaper.com/)
+- An Instapaper account (optional, for automatic article saving - sign up at https://www.instapaper.com/)
+- A Todoist account (optional, for task creation - sign up at https://todoist.com/)
 - Wrangler CLI (installed automatically with npm install)
 
 ## Local Development
@@ -51,10 +52,12 @@ This project contains a Cloudflare Worker that serves as the backend for the Boo
    ANTHROPIC_API_KEY=your-anthropic-api-key-here
    INSTAPAPER_USERNAME=your-instapaper-email@example.com
    INSTAPAPER_PASSWORD=your-instapaper-password
+   TODOIST_API_TOKEN=your-todoist-api-token-here
    ```
 
    - Get your Anthropic API key from: https://console.anthropic.com/
    - Use your Instapaper account credentials from: https://www.instapaper.com/
+   - Get your Todoist API token from: https://app.todoist.com/app/settings/integrations/developer
 
 3. Start the development server:
    ```bash
@@ -77,7 +80,8 @@ Analyze a bookmark URL using Claude AI
 **Request:**
 ```json
 {
-  "url": "https://example.com/article"
+  "url": "https://example.com/article",
+  "createTodoistTask": false
 }
 ```
 
@@ -93,9 +97,15 @@ Analyze a bookmark URL using Claude AI
     "title": "Example Article Title",
     "summary": "A brief summary of the article content.",
     "categories": ["technology", "web development"],
+    "matchedCategory": "Work_and_Engineering/Software_Development/...",
     "instapaper": {
       "saved": true,
       "bookmarkId": 1234567890,
+      "error": null
+    },
+    "todoist": {
+      "created": false,
+      "taskId": null,
       "error": null
     },
     "analyzedAt": "2025-10-26T08:56:01.509Z"
@@ -110,6 +120,7 @@ The API uses Claude AI to:
 - Create a brief summary
 - Suggest relevant categories/tags
 - **Automatically save articles to Instapaper** (when credentials are configured)
+- **Optionally create tasks in Todoist** (when requested via `createTodoistTask` parameter)
 
 ## Bookmarklet
 
@@ -143,18 +154,25 @@ The [`bookmarklet/`](bookmarklet/) directory contains:
 
 1. Navigate to any webpage you want to analyze
 2. Click the "Analyze Bookmark" button in your bookmarks bar
-3. A modal will appear showing:
+3. A dialog will appear with:
+   - The current page URL
+   - A checkbox to optionally create a Todoist task (unchecked by default)
+   - Analyze and Cancel buttons
+4. Click "Analyze" to send the URL to the API
+5. Results will appear showing:
    - AI-generated title and summary
    - Content type classification
    - Suggested categories
    - Matched category (for non-articles)
    - Instapaper save status (for articles)
+   - Todoist task creation status (if checkbox was checked)
 
 ### How It Works
 
 The bookmarklet:
+- Shows a confirmation dialog with optional Todoist task creation
 - Captures the current page URL
-- Sends it to your Bookmark-AI API endpoint
+- Sends it to your Bookmark-AI API endpoint with user preferences
 - Displays the AI analysis in a modal overlay
 - Works on any website without requiring a browser extension
 
@@ -185,6 +203,10 @@ Add the following secrets to your GitHub repository (Settings > Secrets and vari
 5. `INSTAPAPER_PASSWORD` - Your Instapaper account password
    - Your Instapaper account password
    - This is required for automatically saving articles to Instapaper
+
+6. `TODOIST_API_TOKEN` - Your Todoist API token
+   - Get your API token from: https://app.todoist.com/app/settings/integrations/developer
+   - This is required for creating tasks in Todoist via the bookmarklet
 
 ### Manual Deployment
 

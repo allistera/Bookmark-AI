@@ -30,7 +30,12 @@ This directory contains the bookmarklet scripts for Bookmark-AI.
 
 1. Navigate to any webpage you want to analyze
 2. Click the "Analyze Bookmark" button in your bookmarks bar
-3. A modal will appear with the AI analysis results
+3. A dialog will appear showing:
+   - The current page URL
+   - A checkbox to optionally create a Todoist task (unchecked by default)
+   - Analyze and Cancel buttons
+4. Click "Analyze" to send the URL to the API
+5. Results will appear with the AI analysis
 
 ## Customization
 
@@ -44,11 +49,13 @@ To customize the bookmarklet:
 ## What It Does
 
 The bookmarklet:
+- Shows a confirmation dialog with optional Todoist task creation checkbox
 - Captures the current page URL
-- Sends it to your Bookmark-AI API (`/api/bookmarks` endpoint)
+- Sends it to your Bookmark-AI API (`/api/bookmarks` endpoint) with user preferences
 - Displays results in a modal overlay including:
   - AI-generated title and summary
   - Content type classification
   - Suggested categories
   - Matched category (for non-articles)
   - Instapaper save status (for articles)
+  - Todoist task creation status (if checkbox was checked)
