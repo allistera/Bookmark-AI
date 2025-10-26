@@ -25,7 +25,7 @@ export default {
         endpoints: {
           '/': 'This help message',
           '/health': 'Health check endpoint',
-          '/api/bookmarks': 'Bookmark API (coming soon)'
+          '/api/bookmarks': 'POST - Submit a bookmark URL for processing'
         }
       }), {
         headers: {
@@ -45,6 +45,81 @@ export default {
           ...getCORSHeaders()
         }
       });
+    }
+
+    if (url.pathname === '/api/bookmarks') {
+      if (request.method !== 'POST') {
+        return new Response(JSON.stringify({
+          error: 'Method Not Allowed',
+          message: 'This endpoint only accepts POST requests'
+        }), {
+          status: 405,
+          headers: {
+            'Content-Type': 'application/json',
+            ...getCORSHeaders()
+          }
+        });
+      }
+
+      try {
+        const body = await request.json() as { url?: string };
+
+        if (!body.url) {
+          return new Response(JSON.stringify({
+            error: 'Bad Request',
+            message: 'Missing required property: url'
+          }), {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...getCORSHeaders()
+            }
+          });
+        }
+
+        // Validate URL format
+        try {
+          new URL(body.url);
+        } catch {
+          return new Response(JSON.stringify({
+            error: 'Bad Request',
+            message: 'Invalid URL format'
+          }), {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...getCORSHeaders()
+            }
+          });
+        }
+
+        // Process the bookmark URL
+        return new Response(JSON.stringify({
+          success: true,
+          message: 'Bookmark received',
+          data: {
+            url: body.url,
+            receivedAt: new Date().toISOString()
+          }
+        }), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            ...getCORSHeaders()
+          }
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({
+          error: 'Bad Request',
+          message: 'Invalid JSON body'
+        }), {
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            ...getCORSHeaders()
+          }
+        });
+      }
     }
 
     // 404 for unknown routes
