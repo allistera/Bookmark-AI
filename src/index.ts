@@ -12,20 +12,30 @@ export interface Env {
 /**
  * Analyzes a bookmark URL using Claude AI
  */
-async function analyzeBookmark(url: string, apiKey: string): Promise<{ title: string; summary: string; categories: string[] }> {
+async function analyzeBookmark(url: string, apiKey: string): Promise<{
+  isArticle: boolean;
+  title: string;
+  summary: string;
+  categories: string[];
+  contentType: string;
+}> {
   const anthropic = new Anthropic({
     apiKey: apiKey,
   });
 
   const prompt = `Analyze this bookmark URL and provide:
-1. A suggested title/name for the bookmark
-2. A brief summary (1-2 sentences) of what the page is about
-3. 2-3 relevant categories or tags
+1. Whether this is a web article/blog post (true) or something else like a tool, homepage, documentation, etc. (false)
+2. What type of content this is (e.g., "article", "tool", "documentation", "homepage", "video", "repository", etc.)
+3. A suggested title/name for the bookmark
+4. A brief summary (1-2 sentences) of what the page is about
+5. 2-3 relevant categories or tags
 
 URL: ${url}
 
 Please respond in JSON format:
 {
+  "isArticle": true or false,
+  "contentType": "article" or "tool" or "documentation" etc.,
   "title": "Title here",
   "summary": "Summary here",
   "categories": ["category1", "category2", "category3"]
@@ -165,6 +175,8 @@ export default {
             message: 'Bookmark analyzed successfully',
             data: {
               url: body.url,
+              isArticle: analysis.isArticle,
+              contentType: analysis.contentType,
               title: analysis.title,
               summary: analysis.summary,
               categories: analysis.categories,
