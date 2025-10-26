@@ -170,6 +170,11 @@ export default {
         try {
           const analysis = await analyzeBookmark(body.url, env.ANTHROPIC_API_KEY);
 
+          // Generate Instapaper URL if this is an article
+          const instapaperUrl = analysis.isArticle
+            ? `https://www.instapaper.com/hello2?url=${encodeURIComponent(body.url)}&title=${encodeURIComponent(analysis.title)}`
+            : null;
+
           return new Response(JSON.stringify({
             success: true,
             message: 'Bookmark analyzed successfully',
@@ -180,6 +185,7 @@ export default {
               title: analysis.title,
               summary: analysis.summary,
               categories: analysis.categories,
+              instapaperUrl: instapaperUrl,
               analyzedAt: new Date().toISOString()
             }
           }), {

@@ -4,7 +4,7 @@ Use AI to Automatically Sort Bookmarks
 
 ## Overview
 
-This project contains a Cloudflare Worker that serves as the backend for the Bookmark-AI service. The worker uses Claude AI to automatically analyze bookmark URLs and extract metadata including title, summary, categories, and content type classification. The worker is deployed automatically using GitHub Actions.
+This project contains a Cloudflare Worker that serves as the backend for the Bookmark-AI service. The worker uses Claude AI to automatically analyze bookmark URLs and extract metadata including title, summary, categories, and content type classification. For articles, it automatically generates an Instapaper URL to easily add them to your reading list. The worker is deployed automatically using GitHub Actions.
 
 ## Project Structure
 
@@ -84,6 +84,7 @@ Analyze a bookmark URL using Claude AI
     "title": "Example Article Title",
     "summary": "A brief summary of the article content.",
     "categories": ["technology", "web development"],
+    "instapaperUrl": "https://www.instapaper.com/hello2?url=https%3A%2F%2Fexample.com%2Farticle&title=Example%20Article%20Title",
     "analyzedAt": "2025-10-26T08:56:01.509Z"
   }
 }
@@ -95,6 +96,7 @@ The API uses Claude AI to:
 - Generate a suggested title
 - Create a brief summary
 - Suggest relevant categories/tags
+- Generate an Instapaper URL for articles (null for non-articles)
 
 ## Deployment
 
