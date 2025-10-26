@@ -84,10 +84,10 @@ async function analyzeBookmark(url: string, apiKey: string): Promise<{
 URL: ${url}
 
 ${!url.includes('article') && !url.includes('blog') && !url.includes('post') ? `
-Additionally, if this is NOT an article, match it to the most appropriate category from this list (or return "Other" if none match):
+Additionally, if this is NOT an article, you MUST match it to exactly ONE category - the single best match from this list:
 ${availableCategories.join('\n')}
 
-Return the best matching category path in the "matchedCategory" field.
+IMPORTANT: Return ONLY ONE category path that best matches the URL content. If none of the categories are appropriate, return "Other".
 ` : ''}
 
 Please respond in JSON format:
@@ -97,7 +97,7 @@ Please respond in JSON format:
   "title": "Title here",
   "summary": "Summary here",
   "categories": ["category1", "category2", "category3"],
-  "matchedCategory": "category/path/here" or "Other" (only if not an article)
+  "matchedCategory": "Single/Best/Category/Path" or "Other" (REQUIRED if not an article - return only ONE category)
 }`;
 
   const message = await anthropic.messages.create({
