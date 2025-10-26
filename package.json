@@ -28,5 +28,8 @@
     "typescript": "^5.3.3",
     "wrangler": "^3.80.0",
     "yaml-lint": "^1.7.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.67.0"
   }
 }
