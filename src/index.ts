@@ -4,11 +4,56 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
+import * as yaml from 'js-yaml';
+import bookmarkFormatYaml from '../bookmark_format.yaml';
 
 export interface Env {
   ANTHROPIC_API_KEY: string;
   INSTAPAPER_USERNAME: string;
   INSTAPAPER_PASSWORD: string;
+}
+
+/**
+ * Type for the bookmark format YAML structure
+ */
+interface BookmarkCategory {
+  [key: string]: BookmarkCategory | string[];
+}
+
+/**
+ * Recursively extracts all category paths from the bookmark format YAML
+ */
+function extractCategories(obj: BookmarkCategory, prefix: string = ''): string[] {
+  const categories: string[] = [];
+
+  for (const key in obj) {
+    if (key === 'Allister_Bookmarks') {
+      // Skip the root key and process its children directly
+      categories.push(...extractCategories(obj[key] as BookmarkCategory, ''));
+      continue;
+    }
+
+    const currentPath = prefix ? `${prefix}/${key}` : key;
+
+    if (typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
+      // This is a category with subcategories
+      categories.push(currentPath);
+      categories.push(...extractCategories(obj[key] as BookmarkCategory, currentPath));
+    } else if (Array.isArray(obj[key])) {
+      // This is a leaf category with items
+      categories.push(currentPath);
+    }
+  }
+
+  return categories;
+}
+
+/**
+ * Gets all available categories from the bookmark format YAML
+ */
+function getAvailableCategories(): string[] {
+  const bookmarkFormat = yaml.load(bookmarkFormatYaml as string) as BookmarkCategory;
+  return extractCategories(bookmarkFormat);
 }
 
 /**
@@ -20,10 +65,14 @@ async function analyzeBookmark(url: string, apiKey: string): Promise<{
   summary: string;
   categories: string[];
   contentType: string;
+  matchedCategory?: string;
 }> {
   const anthropic = new Anthropic({
     apiKey: apiKey,
   });
+
+  // Get available categories from the YAML file
+  const availableCategories = getAvailableCategories();
 
   const prompt = `Analyze this bookmark URL and provide:
 1. Whether this is a web article/blog post (true) or something else like a tool, homepage, documentation, etc. (false)
@@ -34,13 +83,21 @@ async function analyzeBookmark(url: string, apiKey: string): Promise<{
 
 URL: ${url}
 
+${!url.includes('article') && !url.includes('blog') && !url.includes('post') ? `
+Additionally, if this is NOT an article, match it to the most appropriate category from this list (or return "Other" if none match):
+${availableCategories.join('\n')}
+
+Return the best matching category path in the "matchedCategory" field.
+` : ''}
+
 Please respond in JSON format:
 {
   "isArticle": true or false,
   "contentType": "article" or "tool" or "documentation" etc.,
   "title": "Title here",
   "summary": "Summary here",
-  "categories": ["category1", "category2", "category3"]
+  "categories": ["category1", "category2", "category3"],
+  "matchedCategory": "category/path/here" or "Other" (only if not an article)
 }`;
 
   const message = await anthropic.messages.create({
@@ -66,7 +123,14 @@ Please respond in JSON format:
     throw new Error('Could not find JSON in Claude response');
   }
 
-  return JSON.parse(jsonMatch[0]);
+  const result = JSON.parse(jsonMatch[0]);
+
+  // If not an article and no matched category, set to "Other"
+  if (!result.isArticle && !result.matchedCategory) {
+    result.matchedCategory = 'Other';
+  }
+
+  return result;
 }
 
 /**
@@ -247,6 +311,7 @@ export default {
               title: analysis.title,
               summary: analysis.summary,
               categories: analysis.categories,
+              matchedCategory: analysis.matchedCategory,
               instapaper: instapaperResult ? {
                 saved: instapaperResult.success,
                 bookmarkId: instapaperResult.bookmarkId,
