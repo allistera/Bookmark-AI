@@ -19,6 +19,13 @@ enabled = true
 # id = "your-kv-namespace-id"
 # preview_id = "your-preview-kv-namespace-id"
 
+# Environment Variables
+# Set ANTHROPIC_API_KEY as a secret for production:
+# wrangler secret put ANTHROPIC_API_KEY
+#
+# For local development, create a .dev.vars file with:
+# ANTHROPIC_API_KEY=your-api-key-here
+
 # Variable bindings (for environment-specific configuration)
 # [env.production.vars]
 # API_URL = "https://api.example.com"

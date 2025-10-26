@@ -1,0 +1,6 @@
+# Local Development Environment Variables
+# Copy this file to .dev.vars and fill in your actual values
+
+# Anthropic API Key
+# Get your API key from: https://console.anthropic.com/
+ANTHROPIC_API_KEY=your-anthropic-api-key-here

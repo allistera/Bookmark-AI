@@ -3,13 +3,62 @@
  * A basic worker for the Bookmark-AI service
  */
 
+import Anthropic from '@anthropic-ai/sdk';
+
 export interface Env {
-  // Define your environment variables here
-  // Example: API_KEY: string;
+  ANTHROPIC_API_KEY: string;
+}
+
+/**
+ * Analyzes a bookmark URL using Claude AI
+ */
+async function analyzeBookmark(url: string, apiKey: string): Promise<{ title: string; summary: string; categories: string[] }> {
+  const anthropic = new Anthropic({
+    apiKey: apiKey,
+  });
+
+  const prompt = `Analyze this bookmark URL and provide:
+1. A suggested title/name for the bookmark
+2. A brief summary (1-2 sentences) of what the page is about
+3. 2-3 relevant categories or tags
+
+URL: ${url}
+
+Please respond in JSON format:
+{
+  "title": "Title here",
+  "summary": "Summary here",
+  "categories": ["category1", "category2", "category3"]
+}`;
+
+  const message = await anthropic.messages.create({
+    model: 'claude-3-5-sonnet-20241022',
+    max_tokens: 1024,
+    messages: [
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ],
+  });
+
+  // Extract the text content from the response
+  const textContent = message.content.find((block) => block.type === 'text');
+  if (!textContent || textContent.type !== 'text') {
+    throw new Error('No text content in Claude response');
+  }
+
+  // Parse the JSON response
+  const jsonMatch = textContent.text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error('Could not find JSON in Claude response');
+  }
+
+  return JSON.parse(jsonMatch[0]);
 }
 
 export default {
-  async fetch(request: Request, _env: Env, _ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     // Handle CORS preflight requests
@@ -93,21 +142,54 @@ export default {
           });
         }
 
-        // Process the bookmark URL
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Bookmark received',
-          data: {
-            url: body.url,
-            receivedAt: new Date().toISOString()
-          }
-        }), {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-            ...getCORSHeaders()
-          }
-        });
+        // Check if API key is configured
+        if (!env.ANTHROPIC_API_KEY) {
+          return new Response(JSON.stringify({
+            error: 'Internal Server Error',
+            message: 'API key not configured'
+          }), {
+            status: 500,
+            headers: {
+              'Content-Type': 'application/json',
+              ...getCORSHeaders()
+            }
+          });
+        }
+
+        // Process the bookmark URL with Claude AI
+        try {
+          const analysis = await analyzeBookmark(body.url, env.ANTHROPIC_API_KEY);
+
+          return new Response(JSON.stringify({
+            success: true,
+            message: 'Bookmark analyzed successfully',
+            data: {
+              url: body.url,
+              title: analysis.title,
+              summary: analysis.summary,
+              categories: analysis.categories,
+              analyzedAt: new Date().toISOString()
+            }
+          }), {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+              ...getCORSHeaders()
+            }
+          });
+        } catch (error) {
+          return new Response(JSON.stringify({
+            error: 'Internal Server Error',
+            message: 'Failed to analyze bookmark',
+            details: error instanceof Error ? error.message : 'Unknown error'
+          }), {
+            status: 500,
+            headers: {
+              'Content-Type': 'application/json',
+              ...getCORSHeaders()
+            }
+          });
+        }
       } catch (error) {
         return new Response(JSON.stringify({
           error: 'Bad Request',
