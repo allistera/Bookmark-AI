@@ -12,9 +12,15 @@ This project contains a Cloudflare Worker that serves as the backend for the Boo
 .
 ├── src/
 │   └── index.ts          # Main worker code
+├── bookmarklet/
+│   ├── bookmarklet-source.js       # Readable bookmarklet source
+│   ├── bookmarklet-local.js        # Bookmarklet for local dev
+│   ├── bookmarklet-production.js   # Bookmarklet template for production
+│   └── README.md                   # Bookmarklet documentation
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml    # GitHub Actions deployment workflow
+├── bookmark_format.yaml  # Category hierarchy definition
 ├── wrangler.toml         # Cloudflare Worker configuration
 ├── package.json          # Node.js dependencies
 └── tsconfig.json         # TypeScript configuration
@@ -110,11 +116,10 @@ The API uses Claude AI to:
 
 A bookmarklet allows you to analyze the current webpage with a single click from your browser's bookmark bar.
 
-### Installation
+### Quick Start
 
 1. **Show your bookmarks bar** (if hidden):
-   - Chrome/Edge: Press `Ctrl+Shift+B` (Windows/Linux) or `Cmd+Shift+B` (Mac)
-   - Firefox: Press `Ctrl+Shift+B` (Windows/Linux) or `Cmd+Shift+B` (Mac)
+   - Chrome/Edge/Firefox: Press `Ctrl+Shift+B` (Windows/Linux) or `Cmd+Shift+B` (Mac)
    - Safari: Press `Cmd+Shift+B` (Mac)
 
 2. **Create a new bookmark**:
@@ -122,19 +127,19 @@ A bookmarklet allows you to analyze the current webpage with a single click from
    - Select "Add page" or "Add bookmark"
    - Name it: `Analyze Bookmark`
 
-3. **Paste the bookmarklet code** into the URL field:
-
-   **For local development (http://localhost:8787):**
-   ```javascript
-   javascript:(function(){const API_URL='http://localhost:8787/api/bookmarks';const currentUrl=window.location.href;const overlay=document.createElement('div');overlay.id='bookmark-ai-overlay';overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:999999;display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,sans-serif;';const modal=document.createElement('div');modal.style.cssText='background:white;border-radius:12px;padding:30px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);';modal.innerHTML='<div style="text-align:center;"><h2 style="color:#667eea;margin-bottom:20px;">Analyzing...</h2><div style="border:4px solid #f3f3f3;border-top:4px solid #667eea;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;margin:20px auto;"></div></div><style>@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}</style>';overlay.appendChild(modal);document.body.appendChild(overlay);overlay.addEventListener('click',function(e){if(e.target===overlay)document.body.removeChild(overlay);});fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:currentUrl})}).then(response=>response.json()).then(data=>{if(data.success&&data.data){const result=data.data;const categories=result.categories?result.categories.join(', '):'N/A';const matchedCategory=result.matchedCategory||'N/A';const instapaperStatus=result.instapaper?.saved?'<span style="color:#10b981;">✓ Saved</span>':result.instapaper?.error?'<span style="color:#ef4444;">✗ Error</span>':'<span style="color:#6b7280;">Not saved</span>';modal.innerHTML='<div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;"><h2 style="color:#667eea;margin:0;">Analysis</h2><button onclick="this.closest(\'#bookmark-ai-overlay\').remove()" style="background:#ef4444;color:white;border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:20px;">×</button></div><div style="margin-bottom:15px;"><strong style="color:#764ba2;">Title:</strong><p style="margin:5px 0 0 0;">'+result.title+'</p></div><div style="margin-bottom:15px;"><strong style="color:#764ba2;">Content Type:</strong><p style="margin:5px 0 0 0;"><span style="background:#e6f7ff;padding:4px 8px;border-radius:4px;">'+result.contentType+'</span></p></div><div style="margin-bottom:15px;"><strong style="color:#764ba2;">Summary:</strong><p style="margin:5px 0 0 0;">'+result.summary+'</p></div><div style="margin-bottom:15px;"><strong style="color:#764ba2;">Categories:</strong><p style="margin:5px 0 0 0;">'+categories+'</p></div>'+(result.matchedCategory?'<div style="margin-bottom:15px;"><strong style="color:#764ba2;">Matched:</strong><p style="margin:5px 0 0 0;font-family:monospace;font-size:0.9em;">'+matchedCategory+'</p></div>':'')+'<div style="margin-bottom:15px;"><strong style="color:#764ba2;">Instapaper:</strong><p style="margin:5px 0 0 0;">'+instapaperStatus+'</p></div><button onclick="this.closest(\'#bookmark-ai-overlay\').remove()" style="background:#667eea;color:white;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;width:100%;margin-top:20px;">Close</button></div>';}else{throw new Error(data.error||'Failed to analyze');}}).catch(error=>{modal.innerHTML='<div><h2 style="color:#ef4444;margin-bottom:20px;">Error</h2><p style="margin-bottom:20px;">'+error.message+'</p><button onclick="this.closest(\'#bookmark-ai-overlay\').remove()" style="background:#ef4444;color:white;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;width:100%;">Close</button></div>';});})();
-   ```
-
-   **For production (replace YOUR_WORKER_URL with your deployed URL):**
-   ```javascript
-   javascript:(function(){const API_URL='YOUR_WORKER_URL/api/bookmarks';const currentUrl=window.location.href;const overlay=document.createElement('div');overlay.id='bookmark-ai-overlay';overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:999999;display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,sans-serif;';const modal=document.createElement('div');modal.style.cssText='background:white;border-radius:12px;padding:30px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);';modal.innerHTML='<div style="text-align:center;"><h2 style="color:#667eea;margin-bottom:20px;">Analyzing...</h2><div style="border:4px solid #f3f3f3;border-top:4px solid #667eea;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;margin:20px auto;"></div></div><style>@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}</style>';overlay.appendChild(modal);document.body.appendChild(overlay);overlay.addEventListener('click',function(e){if(e.target===overlay)document.body.removeChild(overlay);});fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:currentUrl})}).then(response=>response.json()).then(data=>{if(data.success&&data.data){const result=data.data;const categories=result.categories?result.categories.join(', '):'N/A';const matchedCategory=result.matchedCategory||'N/A';const instapaperStatus=result.instapaper?.saved?'<span style="color:#10b981;">✓ Saved</span>':result.instapaper?.error?'<span style="color:#ef4444;">✗ Error</span>':'<span style="color:#6b7280;">Not saved</span>';modal.innerHTML='<div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;"><h2 style="color:#667eea;margin:0;">Analysis</h2><button onclick="this.closest(\'#bookmark-ai-overlay\').remove()" style="background:#ef4444;color:white;border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:20px;">×</button></div><div style="margin-bottom:15px;"><strong style="color:#764ba2;">Title:</strong><p style="margin:5px 0 0 0;">'+result.title+'</p></div><div style="margin-bottom:15px;"><strong style="color:#764ba2;">Content Type:</strong><p style="margin:5px 0 0 0;"><span style="background:#e6f7ff;padding:4px 8px;border-radius:4px;">'+result.contentType+'</span></p></div><div style="margin-bottom:15px;"><strong style="color:#764ba2;">Summary:</strong><p style="margin:5px 0 0 0;">'+result.summary+'</p></div><div style="margin-bottom:15px;"><strong style="color:#764ba2;">Categories:</strong><p style="margin:5px 0 0 0;">'+categories+'</p></div>'+(result.matchedCategory?'<div style="margin-bottom:15px;"><strong style="color:#764ba2;">Matched:</strong><p style="margin:5px 0 0 0;font-family:monospace;font-size:0.9em;">'+matchedCategory+'</p></div>':'')+'<div style="margin-bottom:15px;"><strong style="color:#764ba2;">Instapaper:</strong><p style="margin:5px 0 0 0;">'+instapaperStatus+'</p></div><button onclick="this.closest(\'#bookmark-ai-overlay\').remove()" style="background:#667eea;color:white;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;width:100%;margin-top:20px;">Close</button></div>';}else{throw new Error(data.error||'Failed to analyze');}}).catch(error=>{modal.innerHTML='<div><h2 style="color:#ef4444;margin-bottom:20px;">Error</h2><p style="margin-bottom:20px;">'+error.message+'</p><button onclick="this.closest(\'#bookmark-ai-overlay\').remove()" style="background:#ef4444;color:white;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;width:100%;">Close</button></div>';});})();
-   ```
+3. **Copy the bookmarklet code** and paste into the URL field:
+   - **For local development**: Copy the contents of [`bookmarklet/bookmarklet-local.js`](bookmarklet/bookmarklet-local.js)
+   - **For production**: Copy [`bookmarklet/bookmarklet-production.js`](bookmarklet/bookmarklet-production.js) and replace `YOUR_WORKER_URL` with your deployed Cloudflare Worker URL
 
 4. **Save the bookmark**
+
+### Bookmarklet Files
+
+The [`bookmarklet/`](bookmarklet/) directory contains:
+- **`bookmarklet-source.js`** - Readable source code with comments
+- **`bookmarklet-local.js`** - Ready for local development (http://localhost:8787)
+- **`bookmarklet-production.js`** - Template for production use
+- **`README.md`** - Detailed instructions and customization guide
 
 ### Usage
 
