@@ -14,85 +14,73 @@
 
 (function() {
     // Configuration - replace with your deployed Cloudflare Worker URL
-    const API_URL = 'YOUR_WORKER_URL/api/bookmarks';
+    const WORKER_URL = 'YOUR_WORKER_URL';
+    const BRIDGE_URL = WORKER_URL + '/bridge';
 
     const currentUrl = window.location.href;
 
-    // Create modal overlay
-    const overlay = document.createElement('div');
-    overlay.id = 'bookmark-ai-overlay';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:999999;display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,sans-serif;';
+    // Create hidden iframe for CSP bypass
+    let bridgeFrame = document.getElementById('bookmark-ai-bridge-frame');
+    if (!bridgeFrame) {
+        bridgeFrame = document.createElement('iframe');
+        bridgeFrame.id = 'bookmark-ai-bridge-frame';
+        bridgeFrame.style.display = 'none';
+        bridgeFrame.src = BRIDGE_URL;
+        document.body.appendChild(bridgeFrame);
+    }
 
-    const modal = document.createElement('div');
-    modal.style.cssText = 'background:white;border-radius:12px;padding:30px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);';
+    let isBridgeReady = false;
+    let pendingRequest = null;
 
-    // Initial prompt with Todoist checkbox
-    modal.innerHTML = `
-        <div>
-            <h2 style="color:#667eea;margin-bottom:20px;">Analyze Bookmark</h2>
-            <p style="margin-bottom:15px;color:#666;">URL: <span style="word-break:break-all;font-size:0.9em;">${currentUrl}</span></p>
+    // Listen for messages from the bridge
+    window.addEventListener('message', function(event) {
+        // Only accept messages from our bridge origin
+        if (event.origin !== WORKER_URL.replace(/\/$/, '')) {
+            return;
+        }
 
-            <div style="margin:20px 0;padding:15px;background:#f7fafc;border-radius:8px;">
-                <label style="display:flex;align-items:center;cursor:pointer;">
-                    <input type="checkbox" id="todoist-checkbox" style="margin-right:10px;width:18px;height:18px;cursor:pointer;">
-                    <span style="color:#333;">Create task in Todoist</span>
-                </label>
-            </div>
-
-            <div style="display:flex;gap:10px;margin-top:20px;">
-                <button id="analyze-btn" style="flex:1;background:#667eea;color:white;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;font-size:1em;">
-                    Analyze
-                </button>
-                <button class="bookmark-ai-close-btn" style="flex:1;background:#e2e8f0;color:#333;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;font-size:1em;">
-                    Cancel
-                </button>
-            </div>
-        </div>
-    `;
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-
-    // Close on overlay click or close button click
-    overlay.addEventListener('click', function(e) {
-        if (e.target === overlay || e.target.classList.contains('bookmark-ai-close-btn')) {
-            overlay.remove();
+        if (event.data.type === 'BOOKMARK_AI_BRIDGE_READY') {
+            isBridgeReady = true;
+            // If there's a pending request, send it now
+            if (pendingRequest) {
+                bridgeFrame.contentWindow.postMessage(pendingRequest, '*');
+            }
+        } else if (event.data.type === 'BOOKMARK_AI_RESPONSE') {
+            handleApiResponse(event.data);
         }
     });
 
-    // Handle analyze button click
-    document.getElementById('analyze-btn').addEventListener('click', function() {
-        const createTodoistTask = document.getElementById('todoist-checkbox').checked;
+    // Generate unique request ID
+    const requestId = 'req_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
-        // Show loading state
-        modal.innerHTML = `
-            <div style="text-align:center;">
-                <h2 style="color:#667eea;margin-bottom:20px;">Analyzing...</h2>
-                <div style="border:4px solid #f3f3f3;border-top:4px solid #667eea;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;margin:20px auto;"></div>
-            </div>
-            <style>
-                @keyframes spin {
-                    0% { transform: rotate(0deg); }
-                    100% { transform: rotate(360deg); }
-                }
-            </style>
-        `;
+    // Function to send request to bridge
+    function sendToBridge(url, createTodoistTask) {
+        const message = {
+            type: 'BOOKMARK_AI_REQUEST',
+            requestId: requestId,
+            url: url,
+            createTodoistTask: createTodoistTask
+        };
 
-        // Make API request
-        fetch(API_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                url: currentUrl,
-                createTodoistTask: createTodoistTask
-            })
-        })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success && data.data) {
-            const result = data.data;
+        if (isBridgeReady) {
+            bridgeFrame.contentWindow.postMessage(message, '*');
+        } else {
+            // Store request to send when bridge is ready
+            pendingRequest = message;
+        }
+    }
+
+    // Function to handle API response
+    function handleApiResponse(response) {
+        if (response.requestId !== requestId) {
+            return; // Not our response
+        }
+
+        const modal = document.querySelector('#bookmark-ai-overlay div');
+        if (!modal) return;
+
+        if (response.success && response.data.success && response.data.data) {
+            const result = response.data.data;
             const categories = result.categories ? result.categories.join(', ') : 'N/A';
             const matchedCategory = result.matchedCategory || 'N/A';
             const instapaperStatus = result.instapaper?.saved ?
@@ -163,20 +151,81 @@
                 </div>
             `;
         } else {
-            throw new Error(data.error || 'Failed to analyze');
-        }
-    })
-        .catch(error => {
+            const errorMessage = response.error || response.data?.error || 'Failed to analyze';
             modal.innerHTML = `
                 <div>
                     <h2 style="color:#ef4444;margin-bottom:20px;">Error</h2>
-                    <p style="margin-bottom:20px;">${error.message}</p>
+                    <p style="margin-bottom:20px;">${errorMessage}</p>
                     <button class="bookmark-ai-close-btn"
                             style="background:#ef4444;color:white;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;width:100%;">
                         Close
                     </button>
                 </div>
             `;
-        });
+        }
+    }
+
+    // Create modal overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'bookmark-ai-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:999999;display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,sans-serif;';
+
+    const modal = document.createElement('div');
+    modal.style.cssText = 'background:white;border-radius:12px;padding:30px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);';
+
+    // Initial prompt with Todoist checkbox
+    modal.innerHTML = `
+        <div>
+            <h2 style="color:#667eea;margin-bottom:20px;">Analyze Bookmark</h2>
+            <p style="margin-bottom:15px;color:#666;">URL: <span style="word-break:break-all;font-size:0.9em;">${currentUrl}</span></p>
+
+            <div style="margin:20px 0;padding:15px;background:#f7fafc;border-radius:8px;">
+                <label style="display:flex;align-items:center;cursor:pointer;">
+                    <input type="checkbox" id="todoist-checkbox" style="margin-right:10px;width:18px;height:18px;cursor:pointer;">
+                    <span style="color:#333;">Create task in Todoist</span>
+                </label>
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:20px;">
+                <button id="analyze-btn" style="flex:1;background:#667eea;color:white;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;font-size:1em;">
+                    Analyze
+                </button>
+                <button class="bookmark-ai-close-btn" style="flex:1;background:#e2e8f0;color:#333;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;font-size:1em;">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Close on overlay click or close button click
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay || e.target.classList.contains('bookmark-ai-close-btn')) {
+            overlay.remove();
+        }
+    });
+
+    // Handle analyze button click
+    document.getElementById('analyze-btn').addEventListener('click', function() {
+        const createTodoistTask = document.getElementById('todoist-checkbox').checked;
+
+        // Show loading state
+        modal.innerHTML = `
+            <div style="text-align:center;">
+                <h2 style="color:#667eea;margin-bottom:20px;">Analyzing...</h2>
+                <div style="border:4px solid #f3f3f3;border-top:4px solid #667eea;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;margin:20px auto;"></div>
+            </div>
+            <style>
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            </style>
+        `;
+
+        // Send request via bridge to bypass CSP
+        sendToBridge(currentUrl, createTodoistTask);
     });
 })();

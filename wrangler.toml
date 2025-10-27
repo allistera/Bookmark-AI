@@ -7,6 +7,11 @@ compatibility_date = "2024-01-01"
 type = "Text"
 globs = ["**/*.yaml", "**/*.yml"]
 
+# Configure rules for importing HTML files as text
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+
 # Uncomment to use a custom route
 # routes = [
 #   { pattern = "example.com/*", zone_name = "example.com" }
