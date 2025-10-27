@@ -15,67 +15,59 @@
 (function() {
     // Configuration - replace with your deployed Cloudflare Worker URL
     const WORKER_URL = 'YOUR_WORKER_URL';
-    const BRIDGE_URL = WORKER_URL + '/bridge';
-
     const currentUrl = window.location.href;
 
-    // Create hidden iframe for CSP bypass
-    let bridgeFrame = document.getElementById('bookmark-ai-bridge-frame');
-    if (!bridgeFrame) {
-        bridgeFrame = document.createElement('iframe');
-        bridgeFrame.id = 'bookmark-ai-bridge-frame';
-        bridgeFrame.style.display = 'none';
-        bridgeFrame.src = BRIDGE_URL;
-        document.body.appendChild(bridgeFrame);
-    }
-
-    let isBridgeReady = false;
-    let pendingRequest = null;
-
-    // Listen for messages from the bridge
-    window.addEventListener('message', function(event) {
+    // Listen for messages from the bridge popup
+    const messageListener = function(event) {
         // Only accept messages from our bridge origin
         if (event.origin !== WORKER_URL.replace(/\/$/, '')) {
             return;
         }
 
-        if (event.data.type === 'BOOKMARK_AI_BRIDGE_READY') {
-            isBridgeReady = true;
-            // If there's a pending request, send it now
-            if (pendingRequest) {
-                bridgeFrame.contentWindow.postMessage(pendingRequest, '*');
-            }
-        } else if (event.data.type === 'BOOKMARK_AI_RESPONSE') {
+        if (event.data.type === 'BOOKMARK_AI_RESPONSE') {
             handleApiResponse(event.data);
+            // Clean up listener
+            window.removeEventListener('message', messageListener);
         }
-    });
+    };
+    window.addEventListener('message', messageListener);
 
-    // Generate unique request ID
-    const requestId = 'req_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-
-    // Function to send request to bridge
+    // Function to send request to bridge via popup
     function sendToBridge(url, createTodoistTask) {
-        const message = {
-            type: 'BOOKMARK_AI_REQUEST',
-            requestId: requestId,
+        // Encode parameters for URL
+        const params = new URLSearchParams({
             url: url,
-            createTodoistTask: createTodoistTask
-        };
+            todoist: createTodoistTask.toString()
+        });
 
-        if (isBridgeReady) {
-            bridgeFrame.contentWindow.postMessage(message, '*');
-        } else {
-            // Store request to send when bridge is ready
-            pendingRequest = message;
+        // Open popup window with parameters
+        const bridgeUrl = WORKER_URL + '/bridge?' + params.toString();
+        const popup = window.open(
+            bridgeUrl,
+            'bookmark-ai-bridge',
+            'width=400,height=300,left=100,top=100'
+        );
+
+        // Check if popup was blocked
+        if (!popup) {
+            const modal = document.querySelector('#bookmark-ai-overlay div');
+            if (modal) {
+                modal.innerHTML = `
+                    <div>
+                        <h2 style="color:#ef4444;margin-bottom:20px;">Popup Blocked</h2>
+                        <p style="margin-bottom:20px;">Please allow popups for this bookmarklet to work.</p>
+                        <button class="bookmark-ai-close-btn"
+                                style="background:#ef4444;color:white;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;width:100%;">
+                            Close
+                        </button>
+                    </div>
+                `;
+            }
         }
     }
 
     // Function to handle API response
     function handleApiResponse(response) {
-        if (response.requestId !== requestId) {
-            return; // Not our response
-        }
-
         const modal = document.querySelector('#bookmark-ai-overlay div');
         if (!modal) return;
 
