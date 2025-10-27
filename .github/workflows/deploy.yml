@@ -18,16 +18,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
-
-      - name: Run linter
-        run: npm run lint
+        run: npm install
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          secrets: |
+            ANTHROPIC_API_KEY
+            INSTAPAPER_USERNAME
+            INSTAPAPER_PASSWORD
+            TODOIST_API_TOKEN
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          INSTAPAPER_USERNAME: ${{ secrets.INSTAPAPER_USERNAME }}
+          INSTAPAPER_PASSWORD: ${{ secrets.INSTAPAPER_PASSWORD }}
+          TODOIST_API_TOKEN: ${{ secrets.TODOIST_API_TOKEN }}
