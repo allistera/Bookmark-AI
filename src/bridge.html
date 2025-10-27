@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Bookmark-AI Bridge</title>
+</head>
+<body>
+    <script>
+        // This page acts as a bridge to bypass CSP restrictions
+        // It receives messages from the bookmarklet and makes API requests
+
+        window.addEventListener('message', async function(event) {
+            // Security: In production, you should validate event.origin
+            // For now, we'll accept all origins since this is a bookmarklet
+
+            if (event.data.type === 'BOOKMARK_AI_REQUEST') {
+                const { url, createTodoistTask, requestId } = event.data;
+
+                try {
+                    // Get the API URL from the current page's origin
+                    const apiUrl = window.location.origin + '/api/bookmarks';
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            url: url,
+                            createTodoistTask: createTodoistTask
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    // Send the response back to the parent window
+                    event.source.postMessage({
+                        type: 'BOOKMARK_AI_RESPONSE',
+                        requestId: requestId,
+                        success: true,
+                        data: data
+                    }, '*');
+
+                } catch (error) {
+                    // Send error back to the parent window
+                    event.source.postMessage({
+                        type: 'BOOKMARK_AI_RESPONSE',
+                        requestId: requestId,
+                        success: false,
+                        error: error.message
+                    }, '*');
+                }
+            }
+        });
+
+        // Notify parent that the bridge is ready
+        if (window.parent !== window) {
+            window.parent.postMessage({ type: 'BOOKMARK_AI_BRIDGE_READY' }, '*');
+        }
+    </script>
+</body>
+</html>

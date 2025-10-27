@@ -6,6 +6,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import * as yaml from 'js-yaml';
 import bookmarkFormatYaml from '../bookmark_format.yaml';
+import bridgeHtml from './bridge.html';
 
 export interface Env {
   ANTHROPIC_API_KEY: string;
@@ -350,6 +351,7 @@ export default {
         endpoints: {
           '/': 'This help message',
           '/health': 'Health check endpoint',
+          '/bridge': 'Bookmarklet iframe bridge for CSP bypass',
           '/api/bookmarks': 'POST - Submit a bookmark URL for processing'
         }
       }), {
@@ -367,6 +369,15 @@ export default {
       }), {
         headers: {
           'Content-Type': 'application/json',
+          ...getCORSHeaders()
+        }
+      });
+    }
+
+    if (url.pathname === '/bridge') {
+      return new Response(bridgeHtml, {
+        headers: {
+          'Content-Type': 'text/html',
           ...getCORSHeaders()
         }
       });
