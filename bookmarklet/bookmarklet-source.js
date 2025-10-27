@@ -43,7 +43,7 @@
                 <button id="analyze-btn" style="flex:1;background:#667eea;color:white;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;font-size:1em;">
                     Analyze
                 </button>
-                <button onclick="this.closest('#bookmark-ai-overlay').remove()" style="flex:1;background:#e2e8f0;color:#333;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;font-size:1em;">
+                <button class="bookmark-ai-close-btn" style="flex:1;background:#e2e8f0;color:#333;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;font-size:1em;">
                     Cancel
                 </button>
             </div>
@@ -53,10 +53,10 @@
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
 
-    // Close on overlay click
+    // Close on overlay click or close button click
     overlay.addEventListener('click', function(e) {
-        if (e.target === overlay) {
-            document.body.removeChild(overlay);
+        if (e.target === overlay || e.target.classList.contains('bookmark-ai-close-btn')) {
+            overlay.remove();
         }
     });
 
@@ -111,7 +111,7 @@
                 <div>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
                         <h2 style="color:#667eea;margin:0;">Analysis</h2>
-                        <button onclick="this.closest('#bookmark-ai-overlay').remove()"
+                        <button class="bookmark-ai-close-btn"
                                 style="background:#ef4444;color:white;border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:20px;">×</button>
                     </div>
 
@@ -156,7 +156,7 @@
                     </div>
                     ` : ''}
 
-                    <button onclick="this.closest('#bookmark-ai-overlay').remove()"
+                    <button class="bookmark-ai-close-btn"
                             style="background:#667eea;color:white;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;width:100%;margin-top:20px;">
                         Close
                     </button>
@@ -171,7 +171,7 @@
                 <div>
                     <h2 style="color:#ef4444;margin-bottom:20px;">Error</h2>
                     <p style="margin-bottom:20px;">${error.message}</p>
-                    <button onclick="this.closest('#bookmark-ai-overlay').remove()"
+                    <button class="bookmark-ai-close-btn"
                             style="background:#ef4444;color:white;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;width:100%;">
                         Close
                     </button>
