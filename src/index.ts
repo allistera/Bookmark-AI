@@ -107,10 +107,10 @@ async function extractTitleFromUrl(url: string): Promise<string | null> {
       let title = titleMatch[1].trim();
       // Decode common HTML entities
       title = title.replace(/&amp;/g, '&')
-                   .replace(/&lt;/g, '<')
-                   .replace(/&gt;/g, '>')
-                   .replace(/&quot;/g, '"')
-                   .replace(/&#39;/g, "'");
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '\'')
+        .replace(/&#39;/g, '\'');
       console.log(`Extracted title tag: ${title}`);
       return title;
     }
