@@ -110,7 +110,7 @@ Please respond in JSON format:
   let message;
   try {
     message = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241120',
+      model: 'claude-3-5-sonnet-20241022',
       max_tokens: 1024,
       messages: [
         {
