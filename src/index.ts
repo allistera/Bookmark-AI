@@ -73,7 +73,13 @@ async function analyzeBookmark(url: string, apiKey: string): Promise<{
   });
 
   // Get available categories from the YAML file
-  const availableCategories = getAvailableCategories();
+  let availableCategories: string[];
+  try {
+    availableCategories = getAvailableCategories();
+  } catch (error) {
+    console.error('Error loading categories from YAML:', error);
+    throw new Error(`Failed to load bookmark categories: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 
   const prompt = `Analyze this bookmark URL and provide:
 1. Whether this is a web article/blog post (true) or something else like a tool, homepage, documentation, etc. (false)
@@ -101,30 +107,45 @@ Please respond in JSON format:
   "matchedCategory": "Single/Best/Category/Path" or "Other" (REQUIRED if not an article - return only ONE category)
 }`;
 
-  const message = await anthropic.messages.create({
-    model: 'claude-3-5-sonnet-20241120',
-    max_tokens: 1024,
-    messages: [
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ],
-  });
+  let message;
+  try {
+    message = await anthropic.messages.create({
+      model: 'claude-3-5-sonnet-20241120',
+      max_tokens: 1024,
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+    });
+  } catch (error) {
+    console.error('Error calling Anthropic API:', error);
+    throw new Error(`Failed to call Claude AI: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 
   // Extract the text content from the response
   const textContent = message.content.find((block) => block.type === 'text');
   if (!textContent || textContent.type !== 'text') {
+    console.error('No text content in Claude response. Response:', JSON.stringify(message.content));
     throw new Error('No text content in Claude response');
   }
 
   // Parse the JSON response
   const jsonMatch = textContent.text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
+    console.error('Could not find JSON in Claude response. Response text:', textContent.text);
     throw new Error('Could not find JSON in Claude response');
   }
 
-  const result = JSON.parse(jsonMatch[0]);
+  let result;
+  try {
+    result = JSON.parse(jsonMatch[0]);
+  } catch (error) {
+    console.error('Error parsing JSON from Claude response:', error);
+    console.error('JSON string:', jsonMatch[0]);
+    throw new Error(`Failed to parse Claude response: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 
   // If not an article and no matched category, set to "Other"
   if (!result.isArticle && !result.matchedCategory) {
@@ -155,6 +176,7 @@ async function saveToInstapaper(
   const auth = btoa(`${username}:${password}`);
 
   try {
+    console.log(`Saving to Instapaper: ${url}`);
     const response = await fetch(instapaperUrl, {
       method: 'POST',
       headers: {
@@ -181,6 +203,7 @@ async function saveToInstapaper(
       return { success: false, error: `Unexpected status: ${response.status}` };
     }
   } catch (error) {
+    console.error('Error saving to Instapaper:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -203,6 +226,7 @@ async function createTodoistTask(
   const taskContent = `${title}\n${url}\n\n${summary}`;
 
   try {
+    console.log(`Creating Todoist task: ${title}`);
     const response = await fetch(todoistUrl, {
       method: 'POST',
       headers: {
@@ -227,6 +251,7 @@ async function createTodoistTask(
       return { success: false, error: `Unexpected status: ${response.status} - ${errorText}` };
     }
   } catch (error) {
+    console.error('Error creating Todoist task:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -289,6 +314,7 @@ export default {
 
       try {
         const body = await request.json() as { url?: string; createTodoistTask?: boolean };
+        console.log(`Processing bookmark request for URL: ${body.url || 'missing'}`);
 
         if (!body.url) {
           return new Response(JSON.stringify({
@@ -321,6 +347,7 @@ export default {
 
         // Check if API key is configured
         if (!env.ANTHROPIC_API_KEY) {
+          console.error('ANTHROPIC_API_KEY is not configured');
           return new Response(JSON.stringify({
             error: 'Internal Server Error',
             message: 'API key not configured'
@@ -390,6 +417,11 @@ export default {
             }
           });
         } catch (error) {
+          // Log the full error details to Cloudflare Workers logs
+          console.error('Error analyzing bookmark:', error);
+          console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+          console.error('Request URL:', body.url);
+
           return new Response(JSON.stringify({
             error: 'Internal Server Error',
             message: 'Failed to analyze bookmark',
@@ -403,6 +435,7 @@ export default {
           });
         }
       } catch (error) {
+        console.error('Error parsing JSON body:', error);
         return new Response(JSON.stringify({
           error: 'Bad Request',
           message: 'Invalid JSON body'
