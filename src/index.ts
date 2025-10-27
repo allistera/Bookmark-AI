@@ -68,19 +68,18 @@ async function analyzeBookmark(url: string, apiKey: string): Promise<{
   contentType: string;
   matchedCategory?: string;
 }> {
-  try {
-    const anthropic = new Anthropic({
-      apiKey: apiKey,
-    });
+  const anthropic = new Anthropic({
+    apiKey: apiKey,
+  });
 
-    // Get available categories from the YAML file
-    let availableCategories: string[];
-    try {
-      availableCategories = getAvailableCategories();
-    } catch (error) {
-      console.error('Error loading categories from YAML:', error);
-      throw new Error(`Failed to load bookmark categories: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+  // Get available categories from the YAML file
+  let availableCategories: string[];
+  try {
+    availableCategories = getAvailableCategories();
+  } catch (error) {
+    console.error('Error loading categories from YAML:', error);
+    throw new Error(`Failed to load bookmark categories: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 
   const prompt = `Analyze this bookmark URL and provide:
 1. Whether this is a web article/blog post (true) or something else like a tool, homepage, documentation, etc. (false)
@@ -108,56 +107,52 @@ Please respond in JSON format:
   "matchedCategory": "Single/Best/Category/Path" or "Other" (REQUIRED if not an article - return only ONE category)
 }`;
 
-    let message;
-    try {
-      message = await anthropic.messages.create({
-        model: 'claude-3-5-sonnet-20241120',
-        max_tokens: 1024,
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-      });
-    } catch (error) {
-      console.error('Error calling Anthropic API:', error);
-      throw new Error(`Failed to call Claude AI: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-
-    // Extract the text content from the response
-    const textContent = message.content.find((block) => block.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
-      console.error('No text content in Claude response. Response:', JSON.stringify(message.content));
-      throw new Error('No text content in Claude response');
-    }
-
-    // Parse the JSON response
-    const jsonMatch = textContent.text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      console.error('Could not find JSON in Claude response. Response text:', textContent.text);
-      throw new Error('Could not find JSON in Claude response');
-    }
-
-    let result;
-    try {
-      result = JSON.parse(jsonMatch[0]);
-    } catch (error) {
-      console.error('Error parsing JSON from Claude response:', error);
-      console.error('JSON string:', jsonMatch[0]);
-      throw new Error(`Failed to parse Claude response: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-
-    // If not an article and no matched category, set to "Other"
-    if (!result.isArticle && !result.matchedCategory) {
-      result.matchedCategory = 'Other';
-    }
-
-    return result;
+  let message;
+  try {
+    message = await anthropic.messages.create({
+      model: 'claude-3-5-sonnet-20241120',
+      max_tokens: 1024,
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+    });
   } catch (error) {
-    // Re-throw the error so it can be caught by the caller
-    throw error;
+    console.error('Error calling Anthropic API:', error);
+    throw new Error(`Failed to call Claude AI: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
+
+  // Extract the text content from the response
+  const textContent = message.content.find((block) => block.type === 'text');
+  if (!textContent || textContent.type !== 'text') {
+    console.error('No text content in Claude response. Response:', JSON.stringify(message.content));
+    throw new Error('No text content in Claude response');
+  }
+
+  // Parse the JSON response
+  const jsonMatch = textContent.text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    console.error('Could not find JSON in Claude response. Response text:', textContent.text);
+    throw new Error('Could not find JSON in Claude response');
+  }
+
+  let result;
+  try {
+    result = JSON.parse(jsonMatch[0]);
+  } catch (error) {
+    console.error('Error parsing JSON from Claude response:', error);
+    console.error('JSON string:', jsonMatch[0]);
+    throw new Error(`Failed to parse Claude response: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+
+  // If not an article and no matched category, set to "Other"
+  if (!result.isArticle && !result.matchedCategory) {
+    result.matchedCategory = 'Other';
+  }
+
+  return result;
 }
 
 /**
