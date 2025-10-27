@@ -3,59 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <title>Bookmark-AI Bridge</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            text-align: center;
+            padding: 40px;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <h2>Processing bookmark...</h2>
+        <div class="spinner"></div>
+        <p>Please wait while we analyze your bookmark.</p>
+    </div>
     <script>
         // This page acts as a bridge to bypass CSP restrictions
-        // It receives messages from the bookmarklet and makes API requests
+        // It receives the request via URL parameters or postMessage and makes API requests
 
-        window.addEventListener('message', async function(event) {
-            // Security: In production, you should validate event.origin
-            // For now, we'll accept all origins since this is a bookmarklet
+        async function processBookmark(url, createTodoistTask) {
+            try {
+                // Get the API URL from the current page's origin
+                const apiUrl = window.location.origin + '/api/bookmarks';
 
-            if (event.data.type === 'BOOKMARK_AI_REQUEST') {
-                const { url, createTodoistTask, requestId } = event.data;
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        url: url,
+                        createTodoistTask: createTodoistTask
+                    })
+                });
 
-                try {
-                    // Get the API URL from the current page's origin
-                    const apiUrl = window.location.origin + '/api/bookmarks';
+                const data = await response.json();
 
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            url: url,
-                            createTodoistTask: createTodoistTask
-                        })
-                    });
-
-                    const data = await response.json();
-
-                    // Send the response back to the parent window
-                    event.source.postMessage({
+                // Send the response back to the opener window
+                if (window.opener && !window.opener.closed) {
+                    window.opener.postMessage({
                         type: 'BOOKMARK_AI_RESPONSE',
-                        requestId: requestId,
                         success: true,
                         data: data
                     }, '*');
+                }
 
-                } catch (error) {
-                    // Send error back to the parent window
-                    event.source.postMessage({
+                // Close this window after a short delay
+                setTimeout(() => {
+                    window.close();
+                }, 500);
+
+            } catch (error) {
+                // Send error back to the opener window
+                if (window.opener && !window.opener.closed) {
+                    window.opener.postMessage({
                         type: 'BOOKMARK_AI_RESPONSE',
-                        requestId: requestId,
                         success: false,
                         error: error.message
                     }, '*');
                 }
-            }
-        });
 
-        // Notify parent that the bridge is ready
-        if (window.parent !== window) {
-            window.parent.postMessage({ type: 'BOOKMARK_AI_BRIDGE_READY' }, '*');
+                // Close this window after a short delay
+                setTimeout(() => {
+                    window.close();
+                }, 500);
+            }
+        }
+
+        // Check if we have URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const bookmarkUrl = urlParams.get('url');
+        const createTodoistTask = urlParams.get('todoist') === 'true';
+
+        if (bookmarkUrl) {
+            // Process immediately if URL is provided
+            processBookmark(bookmarkUrl, createTodoistTask);
+        } else {
+            // Listen for messages from the opener
+            window.addEventListener('message', async function(event) {
+                if (event.data.type === 'BOOKMARK_AI_REQUEST') {
+                    const { url, createTodoistTask } = event.data;
+                    await processBookmark(url, createTodoistTask);
+                }
+            });
+
+            // Notify opener that the bridge is ready
+            if (window.opener && !window.opener.closed) {
+                window.opener.postMessage({ type: 'BOOKMARK_AI_BRIDGE_READY' }, '*');
+            }
         }
     </script>
 </body>

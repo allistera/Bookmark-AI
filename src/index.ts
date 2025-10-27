@@ -351,7 +351,7 @@ export default {
         endpoints: {
           '/': 'This help message',
           '/health': 'Health check endpoint',
-          '/bridge': 'Bookmarklet iframe bridge for CSP bypass',
+          '/bridge': 'Bookmarklet popup bridge for CSP bypass',
           '/api/bookmarks': 'POST - Submit a bookmark URL for processing'
         }
       }), {
