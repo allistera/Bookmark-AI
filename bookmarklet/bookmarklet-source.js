@@ -16,6 +16,7 @@
     // Configuration - replace with your deployed Cloudflare Worker URL
     const WORKER_URL = 'YOUR_WORKER_URL';
     const currentUrl = window.location.href;
+    const currentTitle = document.title;
 
     // Listen for messages from the bridge popup
     const messageListener = function(event) {
@@ -33,10 +34,11 @@
     window.addEventListener('message', messageListener);
 
     // Function to send request to bridge via popup
-    function sendToBridge(url, createTodoistTask) {
+    function sendToBridge(url, title, createTodoistTask) {
         // Encode parameters for URL
         const params = new URLSearchParams({
             url: url,
+            title: title,
             todoist: createTodoistTask.toString()
         });
 
@@ -218,6 +220,6 @@
         `;
 
         // Send request via bridge to bypass CSP
-        sendToBridge(currentUrl, createTodoistTask);
+        sendToBridge(currentUrl, currentTitle, createTodoistTask);
     });
 })();
