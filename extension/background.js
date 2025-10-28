@@ -10,9 +10,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 async function handleAnalyzeBookmark({ url, title, createTodoist, autoBookmark }) {
   try {
-    // Get API endpoint from storage
+    // Get API endpoint and prepend folder from storage
     const settings = await chrome.storage.sync.get({
-      apiEndpoint: 'https://bookmark-ai.allistera.workers.dev'
+      apiEndpoint: 'https://bookmark-ai.allistera.workers.dev',
+      prependFolder: ''
     });
 
     // Call the Bookmark AI API
@@ -43,7 +44,7 @@ async function handleAnalyzeBookmark({ url, title, createTodoist, autoBookmark }
     // If auto-bookmark is enabled, create the bookmark
     if (autoBookmark) {
       const categoryPath = result.data.matchedCategory || 'Other';
-      bookmarkId = await createBookmarkInCategory(url, result.data.title || title, categoryPath);
+      bookmarkId = await createBookmarkInCategory(url, result.data.title || title, categoryPath, settings.prependFolder);
       bookmarkCreated = true;
     }
 
@@ -69,19 +70,27 @@ async function handleAnalyzeBookmark({ url, title, createTodoist, autoBookmark }
  * @param {string} url - The URL to bookmark
  * @param {string} title - The bookmark title
  * @param {string} categoryPath - The category path (e.g., "Work_and_Engineering/Software_Development")
+ * @param {string} prependFolder - Optional folder to prepend to the path (e.g., "Allisters Bookmarks")
  * @returns {Promise<string>} The created bookmark ID
  */
-async function createBookmarkInCategory(url, title, categoryPath) {
+async function createBookmarkInCategory(url, title, categoryPath, prependFolder = '') {
   try {
     // Parse the category path
     const categories = categoryPath.split('/').filter(c => c.trim().length > 0);
 
-    // Get or create the root "Bookmark AI" folder
-    const rootFolder = await getOrCreateFolder('Bookmark AI', '1'); // '1' is the bookmarks bar
+    // Start from the bookmarks bar
+    let currentParentId = '1'; // '1' is the bookmarks bar
 
-    // Navigate/create the folder hierarchy
-    let currentParentId = rootFolder.id;
+    // If a prepend folder is specified, create/get it first
+    if (prependFolder && prependFolder.trim().length > 0) {
+      const prependFolders = prependFolder.split('/').filter(f => f.trim().length > 0);
+      for (const folderName of prependFolders) {
+        const folder = await getOrCreateFolder(folderName, currentParentId);
+        currentParentId = folder.id;
+      }
+    }
 
+    // Navigate/create the category folder hierarchy
     for (const category of categories) {
       const folder = await getOrCreateFolder(category, currentParentId);
       currentParentId = folder.id;

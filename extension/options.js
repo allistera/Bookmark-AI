@@ -1,6 +1,7 @@
 // Default settings
 const DEFAULT_SETTINGS = {
-  apiEndpoint: 'https://bookmark-ai.allistera.workers.dev'
+  apiEndpoint: 'https://bookmark-ai.allistera.workers.dev',
+  prependFolder: ''
 };
 
 // Load saved settings on page load
@@ -18,6 +19,7 @@ async function loadSettings() {
 
     // Populate form fields
     document.getElementById('apiEndpoint').value = settings.apiEndpoint;
+    document.getElementById('prependFolder').value = settings.prependFolder || '';
   } catch (error) {
     console.error('Error loading settings:', error);
     showStatus('Error loading settings', 'error');
@@ -28,6 +30,7 @@ async function saveSettings(event) {
   event.preventDefault();
 
   const apiEndpoint = document.getElementById('apiEndpoint').value.trim();
+  const prependFolder = document.getElementById('prependFolder').value.trim();
 
   // Validate URL
   try {
@@ -40,7 +43,8 @@ async function saveSettings(event) {
   // Save to storage
   try {
     await chrome.storage.sync.set({
-      apiEndpoint: apiEndpoint
+      apiEndpoint: apiEndpoint,
+      prependFolder: prependFolder
     });
 
     showStatus('Settings saved successfully!', 'success');
