@@ -16,6 +16,13 @@ This project contains a Cloudflare Worker that serves as the backend for the Boo
 │   ├── bookmarklet-source.js       # Readable bookmarklet source
 │   ├── bookmarklet-production.js   # Production bookmarklet
 │   └── README.md                   # Bookmarklet documentation
+├── extension/
+│   ├── manifest.json               # Chrome extension manifest
+│   ├── popup.html/js               # Extension popup UI
+│   ├── background.js               # Service worker (handles bookmarks)
+│   ├── options.html/js             # Settings page
+│   ├── icons/                      # Extension icons
+│   └── README.md                   # Extension documentation
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml    # GitHub Actions deployment workflow
@@ -175,6 +182,51 @@ The bookmarklet:
 - Sends it to your Bookmark-AI API endpoint with user preferences
 - Displays the AI analysis in a modal overlay
 - Works on any website without requiring a browser extension
+
+## Chrome Extension
+
+A Chrome extension is available that provides automatic bookmark creation with AI-powered categorization. Unlike the bookmarklet which only displays analysis results, the extension actually creates bookmarks in your Chrome bookmarks manager.
+
+### Features
+
+- **Automatic Bookmark Creation**: Creates bookmarks in Chrome's bookmark manager
+- **Hierarchical Organization**: Organizes bookmarks in folders matching your category structure
+- **Smart Folder Management**: Automatically creates/finds folder hierarchies
+- **Same AI Analysis**: Uses the same backend API as the bookmarklet
+- **All Integrations**: Supports Instapaper and Todoist features
+
+### Quick Start
+
+1. **Navigate to the extension directory**:
+   ```bash
+   cd extension
+   ```
+
+2. **Generate icons**:
+   ```bash
+   node generate-icons.js
+   ```
+
+3. **Load in Chrome**:
+   - Go to `chrome://extensions/`
+   - Enable "Developer mode"
+   - Click "Load unpacked"
+   - Select the `extension` directory
+
+4. **Configure settings**:
+   - Click the extension icon
+   - Click "Extension Settings"
+   - Enter your API endpoint URL
+   - Save settings
+
+### Usage
+
+1. Navigate to any webpage
+2. Click the extension icon
+3. Click "Analyze & Bookmark"
+4. The bookmark will be created automatically in the appropriate folder under "Bookmark AI" in your bookmarks bar
+
+For detailed documentation, see [`extension/README.md`](extension/README.md).
 
 ## Deployment
 
