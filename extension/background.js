@@ -24,6 +24,7 @@ async function handleAnalyzeBookmark({ url, title, createTodoist, autoBookmark }
       },
       body: JSON.stringify({
         url: url,
+        title: title,
         createTodoistTask: createTodoist
       })
     });

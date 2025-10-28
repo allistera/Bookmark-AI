@@ -127,7 +127,7 @@ async function extractTitleFromUrl(url: string): Promise<string | null> {
 /**
  * Analyzes a bookmark URL using Claude AI
  */
-async function analyzeBookmark(url: string, apiKey: string): Promise<{
+async function analyzeBookmark(url: string, apiKey: string, providedTitle?: string): Promise<{
   isArticle: boolean;
   title: string;
   summary: string;
@@ -139,8 +139,11 @@ async function analyzeBookmark(url: string, apiKey: string): Promise<{
     apiKey: apiKey,
   });
 
-  // Try to extract the actual title from the URL's HTML
-  const extractedTitle = await extractTitleFromUrl(url);
+  // Use provided title if available, otherwise try to extract from URL
+  let extractedTitle = providedTitle || null;
+  if (!extractedTitle) {
+    extractedTitle = await extractTitleFromUrl(url);
+  }
 
   // Get available categories from the YAML file
   let availableCategories: string[];
@@ -398,7 +401,7 @@ export default {
       }
 
       try {
-        const body = await request.json() as { url?: string; createTodoistTask?: boolean };
+        const body = await request.json() as { url?: string; title?: string; createTodoistTask?: boolean };
         console.log(`Processing bookmark request for URL: ${body.url || 'missing'}`);
 
         if (!body.url) {
@@ -447,7 +450,7 @@ export default {
 
         // Process the bookmark URL with Claude AI
         try {
-          const analysis = await analyzeBookmark(body.url, env.ANTHROPIC_API_KEY);
+          const analysis = await analyzeBookmark(body.url, env.ANTHROPIC_API_KEY, body.title);
 
           // Automatically save to Instapaper if this is an article
           let instapaperResult = null;

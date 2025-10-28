@@ -43,7 +43,7 @@
         // This page acts as a bridge to bypass CSP restrictions
         // It receives the request via URL parameters or postMessage and makes API requests
 
-        async function processBookmark(url, createTodoistTask) {
+        async function processBookmark(url, title, createTodoistTask) {
             try {
                 // Get the API URL from the current page's origin
                 const apiUrl = window.location.origin + '/api/bookmarks';
@@ -55,6 +55,7 @@
                     },
                     body: JSON.stringify({
                         url: url,
+                        title: title,
                         createTodoistTask: createTodoistTask
                     })
                 });
@@ -95,17 +96,18 @@
         // Check if we have URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const bookmarkUrl = urlParams.get('url');
+        const bookmarkTitle = urlParams.get('title');
         const createTodoistTask = urlParams.get('todoist') === 'true';
 
         if (bookmarkUrl) {
             // Process immediately if URL is provided
-            processBookmark(bookmarkUrl, createTodoistTask);
+            processBookmark(bookmarkUrl, bookmarkTitle, createTodoistTask);
         } else {
             // Listen for messages from the opener
             window.addEventListener('message', async function(event) {
                 if (event.data.type === 'BOOKMARK_AI_REQUEST') {
-                    const { url, createTodoistTask } = event.data;
-                    await processBookmark(url, createTodoistTask);
+                    const { url, title, createTodoistTask } = event.data;
+                    await processBookmark(url, title, createTodoistTask);
                 }
             });
 
