@@ -59,12 +59,24 @@ A Chrome extension that uses AI to automatically categorize and organize your bo
 
 ### Bookmark Organization
 
-Bookmarks are organized under a root folder called "Bookmark AI" in your bookmarks bar, with subfolders matching the categories from your `bookmark_format.yaml` file.
+Bookmarks are organized in your bookmarks bar with subfolders matching the categories from your `bookmark_format.yaml` file.
 
-Example structure:
+By default, bookmarks are saved directly to category folders:
 ```
 Bookmarks Bar/
-└── Bookmark AI/
+├── Work_and_Engineering/
+│   ├── Software_Development/
+│   │   └── Your bookmark here
+│   └── Design/
+├── Entertainment/
+│   └── Movies_and_TV/
+└── Other/
+```
+
+You can configure a custom prepend folder in Extension Settings to organize all bookmarks under a root folder:
+```
+Bookmarks Bar/
+└── Allisters Bookmarks/
     ├── Work_and_Engineering/
     │   ├── Software_Development/
     │   │   └── Your bookmark here
@@ -107,6 +119,11 @@ Access via: Extension popup → "Extension Settings" link
 - **API Endpoint**: URL of your Bookmark AI API
   - Default: `https://bookmark-ai.allistera.workers.dev`
   - Change this to your deployed Worker URL
+
+- **Prepend Folder** (Optional): Custom root folder to prepend to all bookmark paths
+  - Leave empty to save directly to category folders
+  - Example: Set to "Allisters Bookmarks" to save bookmarks under that folder
+  - Supports nested folders: "My Bookmarks/AI Organized"
 
 ### API Configuration
 
@@ -216,7 +233,6 @@ Possible improvements:
 - Edit category before saving
 - Search and filter existing Bookmark AI bookmarks
 - Sync settings across devices
-- Custom folder name (instead of "Bookmark AI")
 - Support for other browsers (Firefox, Edge)
 
 ## License
