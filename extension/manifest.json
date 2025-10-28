@@ -6,7 +6,8 @@
   "permissions": [
     "bookmarks",
     "activeTab",
-    "storage"
+    "storage",
+    "contextMenus"
   ],
   "action": {
     "default_popup": "popup.html",
