@@ -12,22 +12,43 @@ async function handleAnalyzeBookmark({ url, title, createTodoist, autoBookmark }
   try {
     // Get API endpoint and prepend folder from storage
     const settings = await chrome.storage.sync.get({
-      apiEndpoint: 'https://bookmark-ai.allistera.workers.dev',
+      apiEndpoint: '',
       prependFolder: ''
     });
 
+    // Validate API endpoint is configured
+    if (!settings.apiEndpoint || settings.apiEndpoint.trim() === '') {
+      throw new Error('API endpoint not configured. Please configure the API endpoint in Extension Settings.');
+    }
+
+    // Validate API endpoint is a valid URL
+    try {
+      new URL(settings.apiEndpoint);
+    } catch (urlError) {
+      throw new Error('Invalid API endpoint URL. Please check your settings.');
+    }
+
     // Call the Bookmark AI API
-    const response = await fetch(`${settings.apiEndpoint}/api/bookmarks`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        url: url,
-        title: title,
-        createTodoistTask: createTodoist
-      })
-    });
+    let response;
+    try {
+      response = await fetch(`${settings.apiEndpoint}/api/bookmarks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          url: url,
+          title: title,
+          createTodoistTask: createTodoist
+        })
+      });
+    } catch (fetchError) {
+      // Handle network errors (DNS, connection failures, etc.)
+      if (fetchError.message.includes('Failed to fetch')) {
+        throw new Error('Cannot connect to API endpoint. Please verify:\n1. The API endpoint URL is correct in Extension Settings\n2. Your Cloudflare Worker is deployed and running\n3. You have internet connectivity');
+      }
+      throw new Error(`Network error: ${fetchError.message}`);
+    }
 
     if (!response.ok) {
       throw new Error(`API request failed: ${response.status} ${response.statusText}`);

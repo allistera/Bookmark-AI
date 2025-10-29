@@ -1,6 +1,6 @@
 // Default settings
 const DEFAULT_SETTINGS = {
-  apiEndpoint: 'https://bookmark-ai.allistera.workers.dev',
+  apiEndpoint: '',
   prependFolder: ''
 };
 
@@ -32,11 +32,22 @@ async function saveSettings(event) {
   const apiEndpoint = document.getElementById('apiEndpoint').value.trim();
   const prependFolder = document.getElementById('prependFolder').value.trim();
 
-  // Validate URL
+  // Validate API endpoint is not empty
+  if (!apiEndpoint || apiEndpoint === '') {
+    showStatus('Please enter an API endpoint URL', 'error');
+    return;
+  }
+
+  // Validate URL format
   try {
-    new URL(apiEndpoint);
+    const url = new URL(apiEndpoint);
+    // Ensure it's https
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+      showStatus('API endpoint must use HTTP or HTTPS protocol', 'error');
+      return;
+    }
   } catch (error) {
-    showStatus('Please enter a valid URL', 'error');
+    showStatus('Please enter a valid URL (e.g., https://bookmark-ai.your-account.workers.dev)', 'error');
     return;
   }
 

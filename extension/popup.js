@@ -12,6 +12,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('urlDisplay').textContent = currentUrl;
   }
 
+  // Check if API endpoint is configured
+  const settings = await chrome.storage.sync.get({ apiEndpoint: '' });
+  if (!settings.apiEndpoint || settings.apiEndpoint.trim() === '') {
+    showStatus('⚠️ API endpoint not configured. Click "Extension Settings" below to configure.', 'warning');
+    document.getElementById('analyzeBtn').disabled = true;
+  }
+
   // Set up event listeners
   document.getElementById('analyzeBtn').addEventListener('click', analyzeAndBookmark);
   document.getElementById('cancelBtn').addEventListener('click', () => window.close());
@@ -62,7 +69,9 @@ async function analyzeAndBookmark() {
 
 function showStatus(message, type) {
   const statusContainer = document.getElementById('statusContainer');
-  statusContainer.innerHTML = `<div class="status ${type}">${message}</div>`;
+  // Replace newlines with <br> for better formatting
+  const formattedMessage = message.replace(/\n/g, '<br>');
+  statusContainer.innerHTML = `<div class="status ${type}">${formattedMessage}</div>`;
 }
 
 function displayResults(data) {
