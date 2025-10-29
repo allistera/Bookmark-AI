@@ -207,12 +207,16 @@
     </form>
 
     <div class="info-box">
-      <strong>How to use:</strong>
-      1. Make sure your Bookmark AI API is deployed (see the project README)<br>
-      2. Enter your API endpoint URL above (default: <code>https://bookmark-ai.allistera.workers.dev</code>)<br>
-      3. (Optional) Set a prepend folder to organize all bookmarks under a custom root folder<br>
-      4. Click the extension icon when browsing to analyze and bookmark pages<br>
-      5. Bookmarks will be automatically organized in the appropriate category folders
+      <strong>How to get your API endpoint:</strong>
+      1. Deploy your Bookmark AI backend to Cloudflare Workers (see the project README)<br>
+      2. Your API endpoint URL will be: <code>https://bookmark-ai.[YOUR-ACCOUNT].workers.dev</code><br>
+      3. Enter that URL in the "API Endpoint" field above<br>
+      <br>
+      <strong>To deploy:</strong><br>
+      • Run <code>npm run deploy</code> in the project directory, OR<br>
+      • Push to the <code>main</code> branch to trigger automatic deployment via GitHub Actions<br>
+      <br>
+      After deployment, Cloudflare will show you the worker URL. Copy and paste it above.
     </div>
 
     <div class="info-box">

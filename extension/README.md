@@ -35,11 +35,13 @@ A Chrome extension that uses AI to automatically categorize and organize your bo
    - Click "Load unpacked"
    - Select the `extension` directory from this project
 
-3. **Configure Settings**:
+3. **Configure Settings** (Required):
    - Click the extension icon in your toolbar
    - Click "Extension Settings" at the bottom of the popup
-   - Enter your API endpoint URL
+   - Enter your API endpoint URL (e.g., `https://bookmark-ai.your-account.workers.dev`)
    - Click "Save Settings"
+
+   **Important:** You must deploy your Bookmark AI backend to Cloudflare Workers first and configure the extension with your worker URL before it can be used. See the [Deployment section](#deployment) in the main README.
 
 ## Usage
 
@@ -116,9 +118,10 @@ After analysis, you'll see:
 
 Access via: Extension popup → "Extension Settings" link
 
-- **API Endpoint**: URL of your Bookmark AI API
-  - Default: `https://bookmark-ai.allistera.workers.dev`
-  - Change this to your deployed Worker URL
+- **API Endpoint**: URL of your Bookmark AI API (Required)
+  - No default - you must configure this before first use
+  - Format: `https://bookmark-ai.[your-cloudflare-account].workers.dev`
+  - Get this URL after deploying your Cloudflare Worker
 
 - **Prepend Folder** (Optional): Custom root folder to prepend to all bookmark paths
   - Leave empty to save directly to category folders
@@ -192,6 +195,18 @@ The extension requires these permissions:
 - **Console Logs**: Check both popup and background worker consoles
 
 ## Troubleshooting
+
+### "API endpoint not configured" error
+- The extension requires configuration before first use
+- Click "Extension Settings" in the popup
+- Enter your Cloudflare Worker URL (e.g., `https://bookmark-ai.your-account.workers.dev`)
+- Make sure you've deployed the backend first (see main README)
+
+### "Failed to fetch" or "ERR_NAME_NOT_RESOLVED" errors
+- Your API endpoint URL is incorrect or the worker isn't deployed
+- Verify the URL in Extension Settings matches your deployed worker
+- Test your worker by visiting the URL in a browser - you should see a welcome message
+- Make sure you deployed using `npm run deploy` or via GitHub Actions
 
 ### Extension doesn't load
 - Make sure icons are generated (`node generate-icons.js`)
