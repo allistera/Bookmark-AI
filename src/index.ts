@@ -23,6 +23,13 @@ interface BookmarkCategory {
 }
 
 /**
+ * Formats a YAML key by replacing underscores with spaces
+ */
+function formatKey(key: string): string {
+  return key.replace(/_/g, ' ');
+}
+
+/**
  * Recursively extracts all category paths from the bookmark format YAML
  */
 function extractCategories(obj: BookmarkCategory, prefix: string = ''): string[] {
@@ -35,7 +42,8 @@ function extractCategories(obj: BookmarkCategory, prefix: string = ''): string[]
       continue;
     }
 
-    const currentPath = prefix ? `${prefix}/${key}` : key;
+    const formattedKey = formatKey(key);
+    const currentPath = prefix ? `${prefix}/${formattedKey}` : formattedKey;
 
     if (typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
       // This is a category with subcategories
