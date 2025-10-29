@@ -27,6 +27,7 @@ jobs:
         run: npm install
 
       - name: Deploy to Cloudflare Workers
+        id: deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -41,3 +42,12 @@ jobs:
           INSTAPAPER_USERNAME: ${{ secrets.INSTAPAPER_USERNAME }}
           INSTAPAPER_PASSWORD: ${{ secrets.INSTAPAPER_PASSWORD }}
           TODOIST_API_TOKEN: ${{ secrets.TODOIST_API_TOKEN }}
+
+      - name: Mask deployment URL
+        if: success()
+        run: |
+          # Mask the deployment URL to prevent it from appearing in logs
+          if [ -n "${{ steps.deploy.outputs.deployment-url }}" ]; then
+            echo "::add-mask::${{ steps.deploy.outputs.deployment-url }}"
+            echo "Deployment successful - URL has been masked for security"
+          fi
