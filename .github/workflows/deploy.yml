@@ -44,12 +44,3 @@ jobs:
           INSTAPAPER_PASSWORD: ${{ secrets.INSTAPAPER_PASSWORD }}
           TODOIST_API_TOKEN: ${{ secrets.TODOIST_API_TOKEN }}
           EXTENSION_API_KEY: ${{ secrets.EXTENSION_API_KEY }}
-
-      - name: Mask deployment URL
-        if: success()
-        run: |
-          # Mask the deployment URL to prevent it from appearing in logs
-          if [ -n "${{ steps.deploy.outputs.deployment-url }}" ]; then
-            echo "::add-mask::${{ steps.deploy.outputs.deployment-url }}"
-            echo "Deployment successful - URL has been masked for security"
-          fi
