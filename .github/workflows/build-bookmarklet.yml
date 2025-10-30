@@ -1,0 +1,47 @@
+name: Build Bookmarklet
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'bookmarklet/bookmarklet-source.js'
+      - 'scripts/build-bookmarklet.js'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build and Update Bookmarklet
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build bookmarklet
+        run: npm run build:bookmarklet
+
+      - name: Check for changes
+        id: git-check
+        run: |
+          git diff --exit-code bookmarklet/bookmarklet-production.js || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push if changed
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add bookmarklet/bookmarklet-production.js
+          git commit -m "chore: update minified bookmarklet [skip ci]"
+          git push
