@@ -1,6 +1,7 @@
 // Default settings
 const DEFAULT_SETTINGS = {
   apiEndpoint: '',
+  apiKey: '',
   prependFolder: ''
 };
 
@@ -19,6 +20,7 @@ async function loadSettings() {
 
     // Populate form fields
     document.getElementById('apiEndpoint').value = settings.apiEndpoint;
+    document.getElementById('apiKey').value = settings.apiKey;
     document.getElementById('prependFolder').value = settings.prependFolder || '';
   } catch (error) {
     console.error('Error loading settings:', error);
@@ -30,11 +32,18 @@ async function saveSettings(event) {
   event.preventDefault();
 
   const apiEndpoint = document.getElementById('apiEndpoint').value.trim();
+  const apiKey = document.getElementById('apiKey').value.trim();
   const prependFolder = document.getElementById('prependFolder').value.trim();
 
   // Validate API endpoint is not empty
   if (!apiEndpoint || apiEndpoint === '') {
     showStatus('Please enter an API endpoint URL', 'error');
+    return;
+  }
+
+  // Validate API key is not empty
+  if (!apiKey || apiKey === '') {
+    showStatus('Please enter an API key', 'error');
     return;
   }
 
@@ -55,6 +64,7 @@ async function saveSettings(event) {
   try {
     await chrome.storage.sync.set({
       apiEndpoint: apiEndpoint,
+      apiKey: apiKey,
       prependFolder: prependFolder
     });
 

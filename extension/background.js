@@ -10,15 +10,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 async function handleAnalyzeBookmark({ url, title, createTodoist, autoBookmark }) {
   try {
-    // Get API endpoint and prepend folder from storage
+    // Get API endpoint, API key, and prepend folder from storage
     const settings = await chrome.storage.sync.get({
       apiEndpoint: '',
+      apiKey: '',
       prependFolder: ''
     });
 
     // Validate API endpoint is configured
     if (!settings.apiEndpoint || settings.apiEndpoint.trim() === '') {
       throw new Error('API endpoint not configured. Please configure the API endpoint in Extension Settings.');
+    }
+
+    // Validate API key is configured
+    if (!settings.apiKey || settings.apiKey.trim() === '') {
+      throw new Error('API key not configured. Please configure the API key in Extension Settings.');
     }
 
     // Validate API endpoint is a valid URL
@@ -34,7 +40,8 @@ async function handleAnalyzeBookmark({ url, title, createTodoist, autoBookmark }
       response = await fetch(`${settings.apiEndpoint}/api/bookmarks`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-API-Key': settings.apiKey
         },
         body: JSON.stringify({
           url: url,

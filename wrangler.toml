@@ -35,11 +35,15 @@ enabled = true
 # wrangler secret put ANTHROPIC_API_KEY
 # wrangler secret put INSTAPAPER_USERNAME
 # wrangler secret put INSTAPAPER_PASSWORD
+# wrangler secret put TODOIST_API_TOKEN
+# wrangler secret put EXTENSION_API_KEY
 #
 # For local development, create a .dev.vars file with:
 # ANTHROPIC_API_KEY=your-api-key-here
 # INSTAPAPER_USERNAME=your-instapaper-email@example.com
 # INSTAPAPER_PASSWORD=your-instapaper-password
+# TODOIST_API_TOKEN=your-todoist-token-here
+# EXTENSION_API_KEY=your-secret-api-key-here
 
 # Variable bindings (for environment-specific configuration)
 # [env.production.vars]

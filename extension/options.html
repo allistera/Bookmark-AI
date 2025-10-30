@@ -57,7 +57,8 @@
     }
 
     input[type="text"],
-    input[type="url"] {
+    input[type="url"],
+    input[type="password"] {
       width: 100%;
       padding: 10px 12px;
       border: 1px solid #ddd;
@@ -68,7 +69,8 @@
     }
 
     input[type="text"]:focus,
-    input[type="url"]:focus {
+    input[type="url"]:focus,
+    input[type="password"]:focus {
       outline: none;
       border-color: #0066cc;
     }
@@ -186,6 +188,21 @@
       </div>
 
       <div class="form-group">
+        <label for="apiKey">API Key</label>
+        <div class="description">
+          Your API key for authenticating with the worker. This should match the EXTENSION_API_KEY configured in your Cloudflare Worker.
+        </div>
+        <input
+          type="password"
+          id="apiKey"
+          name="apiKey"
+          class="code-input"
+          placeholder="your-secret-api-key"
+          required
+        />
+      </div>
+
+      <div class="form-group">
         <label for="prependFolder">Prepend Folder (Optional)</label>
         <div class="description">
           Prepend a folder to all bookmark paths. For example, "Allisters Bookmarks" will save to "Allisters Bookmarks/Work_and_Engineering/..." instead of "Work_and_Engineering/...". Leave empty for no prepending.
@@ -207,16 +224,17 @@
     </form>
 
     <div class="info-box">
-      <strong>How to get your API endpoint:</strong>
+      <strong>How to get your API endpoint and key:</strong>
       1. Deploy your Bookmark AI backend to Cloudflare Workers (see the project README)<br>
       2. Your API endpoint URL will be: <code>https://bookmark-ai.[YOUR-ACCOUNT].workers.dev</code><br>
-      3. Enter that URL in the "API Endpoint" field above<br>
+      3. Set the <code>EXTENSION_API_KEY</code> secret in your Cloudflare Worker or GitHub repository secrets<br>
+      4. Enter the same API key in the "API Key" field above<br>
       <br>
       <strong>To deploy:</strong><br>
       • Run <code>npm run deploy</code> in the project directory, OR<br>
       • Push to the <code>main</code> branch to trigger automatic deployment via GitHub Actions<br>
       <br>
-      After deployment, Cloudflare will show you the worker URL. Copy and paste it above.
+      <strong>Security Note:</strong> Keep your API key secret! It authenticates your extension with the worker.
     </div>
 
     <div class="info-box">

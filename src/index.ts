@@ -13,6 +13,7 @@ export interface Env {
   INSTAPAPER_USERNAME: string;
   INSTAPAPER_PASSWORD: string;
   TODOIST_API_TOKEN: string;
+  EXTENSION_API_KEY: string;
 }
 
 /**
@@ -408,6 +409,22 @@ export default {
         });
       }
 
+      // Validate API key
+      const providedApiKey = request.headers.get('X-API-Key');
+      if (!providedApiKey || providedApiKey !== env.EXTENSION_API_KEY) {
+        console.error('Authentication failed: Invalid or missing API key');
+        return new Response(JSON.stringify({
+          error: 'Unauthorized',
+          message: 'Invalid or missing API key'
+        }), {
+          status: 401,
+          headers: {
+            'Content-Type': 'application/json',
+            ...getCORSHeaders()
+          }
+        });
+      }
+
       try {
         const body = await request.json() as { url?: string; title?: string; createTodoistTask?: boolean };
         console.log(`Processing bookmark request for URL: ${body.url || 'missing'}`);
@@ -561,9 +578,11 @@ export default {
 
 function getCORSHeaders(): Record<string, string> {
   return {
+    // Allow all origins since authentication is enforced via X-API-Key header
+    // This enables the extension to work from any context with valid credentials
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key'
   };
 }
 
