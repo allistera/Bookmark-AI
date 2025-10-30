@@ -68,9 +68,9 @@ function getAvailableCategories(): string[] {
 }
 
 /**
- * Fetches the HTML content of a URL and extracts the title from metadata
+ * Fetches the HTML content of a URL
  */
-async function extractTitleFromUrl(url: string): Promise<string | null> {
+async function fetchHtmlContent(url: string): Promise<string | null> {
   try {
     console.log(`Fetching HTML content for: ${url}`);
     const response = await fetch(url, {
@@ -84,51 +84,9 @@ async function extractTitleFromUrl(url: string): Promise<string | null> {
       return null;
     }
 
-    const html = await response.text();
-
-    // Try to extract title from various meta tags and title element
-    // Priority order: og:title, twitter:title, article:title, title tag
-
-    // Try Open Graph title
-    const ogTitleMatch = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i);
-    if (ogTitleMatch && ogTitleMatch[1]) {
-      console.log(`Extracted og:title: ${ogTitleMatch[1]}`);
-      return ogTitleMatch[1];
-    }
-
-    // Try Twitter card title
-    const twitterTitleMatch = html.match(/<meta\s+name=["']twitter:title["']\s+content=["']([^"']+)["']/i);
-    if (twitterTitleMatch && twitterTitleMatch[1]) {
-      console.log(`Extracted twitter:title: ${twitterTitleMatch[1]}`);
-      return twitterTitleMatch[1];
-    }
-
-    // Try article:title
-    const articleTitleMatch = html.match(/<meta\s+property=["']article:title["']\s+content=["']([^"']+)["']/i);
-    if (articleTitleMatch && articleTitleMatch[1]) {
-      console.log(`Extracted article:title: ${articleTitleMatch[1]}`);
-      return articleTitleMatch[1];
-    }
-
-    // Try standard HTML title tag
-    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-    if (titleMatch && titleMatch[1]) {
-      // Clean up the title (decode HTML entities, trim whitespace)
-      let title = titleMatch[1].trim();
-      // Decode common HTML entities
-      title = title.replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '\'')
-        .replace(/&#39;/g, '\'');
-      console.log(`Extracted title tag: ${title}`);
-      return title;
-    }
-
-    console.log('No title found in HTML');
-    return null;
+    return await response.text();
   } catch (error) {
-    console.error('Error fetching or parsing HTML:', error);
+    console.error('Error fetching HTML:', error);
     return null;
   }
 }
@@ -148,10 +106,15 @@ async function analyzeBookmark(url: string, apiKey: string, providedTitle?: stri
     apiKey: apiKey,
   });
 
-  // Use provided title if available, otherwise try to extract from URL
-  let extractedTitle = providedTitle || null;
-  if (!extractedTitle) {
-    extractedTitle = await extractTitleFromUrl(url);
+  // Fetch HTML content if no title was provided
+  let htmlContent: string | null = null;
+  if (!providedTitle) {
+    htmlContent = await fetchHtmlContent(url);
+    // Truncate HTML to first 8000 characters to keep token usage reasonable
+    // This should include the head section and beginning of body which contains most metadata
+    if (htmlContent && htmlContent.length > 8000) {
+      htmlContent = htmlContent.substring(0, 8000) + '\n... [content truncated]';
+    }
   }
 
   // Get available categories from the YAML file
@@ -163,14 +126,15 @@ async function analyzeBookmark(url: string, apiKey: string, providedTitle?: stri
     throw new Error(`Failed to load bookmark categories: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 
-  const prompt = `Analyze this bookmark URL and provide:
+  const prompt = `Analyze this bookmark and provide:
 1. Whether this is a web article/blog post (true) or something else like a tool, homepage, documentation, etc. (false)
 2. What type of content this is (e.g., "article", "tool", "documentation", "homepage", "video", "repository", etc.)
-3. A suggested title/name for the bookmark${extractedTitle ? ` (the actual page title is: "${extractedTitle}")` : ''}
+3. The title of the page${providedTitle ? ` (the provided title is: "${providedTitle}")` : ' - extract this from the HTML content (check meta tags like og:title, twitter:title, or the <title> tag)'}
 4. A brief summary (1-2 sentences) of what the page is about
 5. 2-3 relevant categories or tags
 
 URL: ${url}
+${htmlContent ? `\nHTML Content (first 8000 chars):\n${htmlContent}` : ''}
 
 ${!url.includes('article') && !url.includes('blog') && !url.includes('post') ? `
 Additionally, if this is NOT an article, you MUST match it to exactly ONE category - the single best match from this list:
@@ -227,11 +191,6 @@ Please respond in JSON format:
     console.error('Error parsing JSON from Claude response:', error);
     console.error('JSON string:', jsonMatch[0]);
     throw new Error(`Failed to parse Claude response: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
-
-  // If we extracted a title from the HTML, use it instead of Claude's suggestion
-  if (extractedTitle) {
-    result.title = extractedTitle;
   }
 
   // If not an article and no matched category, set to "Other"
