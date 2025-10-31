@@ -113,7 +113,7 @@ function displayResults(data) {
     const instapaperStatus = document.getElementById('instapaperStatus');
 
     if (data.instapaper.saved) {
-      instapaperStatus.textContent = `Saved (ID: ${data.instapaper.bookmarkId})`;
+      instapaperStatus.textContent = 'Saved';
       instapaperStatus.style.color = '#2e7d32';
     } else {
       instapaperStatus.textContent = 'Not saved';
@@ -128,7 +128,7 @@ function displayResults(data) {
     const todoistStatus = document.getElementById('todoistStatus');
 
     if (data.todoist.created) {
-      todoistStatus.textContent = `Task created (ID: ${data.todoist.taskId})`;
+      todoistStatus.textContent = 'Task created';
       todoistStatus.style.color = '#2e7d32';
     } else {
       todoistStatus.textContent = 'Task not created';
