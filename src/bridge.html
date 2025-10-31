@@ -2,25 +2,36 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Bookmark-AI Bridge</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bookmark-AI</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
         body {
             font-family: system-ui, -apple-system, sans-serif;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
             margin: 0;
+            padding: 20px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            min-height: 100vh;
         }
         .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            color: #333;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .loading {
             text-align: center;
             padding: 40px;
         }
         .spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid white;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
             border-radius: 50%;
             width: 50px;
             height: 50px;
@@ -31,19 +42,83 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .result-section {
+            margin-bottom: 20px;
+        }
+        .result-section strong {
+            color: #764ba2;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .result-section p {
+            margin: 5px 0 0 0;
+            word-wrap: break-word;
+        }
+        .badge {
+            background: #e6f7ff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .success {
+            color: #10b981;
+        }
+        .error {
+            color: #ef4444;
+        }
+        .muted {
+            color: #6b7280;
+        }
+        button {
+            width: 100%;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #333;
+        }
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        h2 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        .error-container h2 {
+            color: #ef4444;
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 20px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>Processing bookmark...</h2>
-        <div class="spinner"></div>
-        <p>Please wait while we analyze your bookmark.</p>
+        <div class="loading">
+            <h2>Processing bookmark...</h2>
+            <div class="spinner"></div>
+            <p>Please wait while we analyze your bookmark.</p>
+        </div>
     </div>
     <script>
-        // This page acts as a bridge to bypass CSP restrictions
-        // It receives the request via URL parameters or postMessage and makes API requests
+        async function processBookmark(url, title, createTodoistTask, apiKey, returnUrl) {
+            const container = document.querySelector('.container');
 
-        async function processBookmark(url, title, createTodoistTask, apiKey) {
             try {
                 // Get the API URL from the current page's origin
                 const apiUrl = window.location.origin + '/api/bookmarks';
@@ -69,60 +144,115 @@
 
                 const data = await response.json();
 
-                // Send the response back to the opener window
-                if (window.opener && !window.opener.closed) {
-                    window.opener.postMessage({
-                        type: 'BOOKMARK_AI_RESPONSE',
-                        success: true,
-                        data: data
-                    }, '*');
-                }
+                // Display results
+                if (data.success && data.data) {
+                    const result = data.data;
+                    const categories = result.categories ? result.categories.join(', ') : 'N/A';
+                    const instapaperStatus = result.instapaper?.saved ?
+                        '<span class="success">✓ Saved</span>' :
+                        result.instapaper?.error ?
+                        '<span class="error">✗ Error</span>' :
+                        '<span class="muted">Not saved</span>';
 
-                // Close this window after a short delay
-                setTimeout(() => {
-                    window.close();
-                }, 500);
+                    const todoistStatus = result.todoist?.created ?
+                        '<span class="success">✓ Task created</span>' :
+                        result.todoist?.error ?
+                        '<span class="error">✗ Error: ' + result.todoist.error + '</span>' :
+                        null;
+
+                    container.innerHTML = `
+                        <div>
+                            <h2>Analysis Complete</h2>
+
+                            <div class="result-section">
+                                <strong>Title:</strong>
+                                <p>${result.title}</p>
+                            </div>
+
+                            <div class="result-section">
+                                <strong>Content Type:</strong>
+                                <p><span class="badge">${result.contentType}</span></p>
+                            </div>
+
+                            <div class="result-section">
+                                <strong>Summary:</strong>
+                                <p>${result.summary}</p>
+                            </div>
+
+                            <div class="result-section">
+                                <strong>Categories:</strong>
+                                <p>${categories}</p>
+                            </div>
+
+                            ${result.matchedCategory ? `
+                            <div class="result-section">
+                                <strong>Matched Category:</strong>
+                                <p style="font-family:monospace;font-size:0.9em;">${result.matchedCategory}</p>
+                            </div>
+                            ` : ''}
+
+                            <div class="result-section">
+                                <strong>Instapaper:</strong>
+                                <p>${instapaperStatus}</p>
+                            </div>
+
+                            ${todoistStatus ? `
+                            <div class="result-section">
+                                <strong>Todoist:</strong>
+                                <p>${todoistStatus}</p>
+                            </div>
+                            ` : ''}
+
+                            <button class="btn-primary" onclick="window.location.href='${returnUrl}'">
+                                Done - Return to Page
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    const errorMessage = data.error || data.message || 'Failed to analyze';
+                    container.innerHTML = `
+                        <div class="error-container">
+                            <h2>Error</h2>
+                            <p>${errorMessage}</p>
+                            <button class="btn-danger" onclick="window.location.href='${returnUrl}'">
+                                Return to Page
+                            </button>
+                        </div>
+                    `;
+                }
 
             } catch (error) {
-                // Send error back to the opener window
-                if (window.opener && !window.opener.closed) {
-                    window.opener.postMessage({
-                        type: 'BOOKMARK_AI_RESPONSE',
-                        success: false,
-                        error: error.message
-                    }, '*');
-                }
-
-                // Close this window after a short delay
-                setTimeout(() => {
-                    window.close();
-                }, 500);
+                container.innerHTML = `
+                    <div class="error-container">
+                        <h2>Error</h2>
+                        <p>${error.message}</p>
+                        <button class="btn-danger" onclick="window.location.href='${returnUrl}'">
+                            Return to Page
+                        </button>
+                    </div>
+                `;
             }
         }
 
-        // Check if we have URL parameters
+        // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const bookmarkUrl = urlParams.get('url');
         const bookmarkTitle = urlParams.get('title');
         const createTodoistTask = urlParams.get('todoist') === 'true';
         const apiKey = urlParams.get('apiKey');
+        const returnUrl = urlParams.get('returnUrl') || bookmarkUrl || '/';
 
         if (bookmarkUrl) {
             // Process immediately if URL is provided
-            processBookmark(bookmarkUrl, bookmarkTitle, createTodoistTask, apiKey);
+            processBookmark(bookmarkUrl, bookmarkTitle, createTodoistTask, apiKey, returnUrl);
         } else {
-            // Listen for messages from the opener
-            window.addEventListener('message', async function(event) {
-                if (event.data.type === 'BOOKMARK_AI_REQUEST') {
-                    const { url, title, createTodoistTask, apiKey } = event.data;
-                    await processBookmark(url, title, createTodoistTask, apiKey);
-                }
-            });
-
-            // Notify opener that the bridge is ready
-            if (window.opener && !window.opener.closed) {
-                window.opener.postMessage({ type: 'BOOKMARK_AI_BRIDGE_READY' }, '*');
-            }
+            // No URL provided, show error
+            document.querySelector('.container').innerHTML = `
+                <div class="error-container">
+                    <h2>Error</h2>
+                    <p>No URL provided. Please use the bookmarklet to analyze a page.</p>
+                </div>
+            `;
         }
     </script>
 </body>
