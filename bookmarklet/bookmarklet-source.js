@@ -1,7 +1,10 @@
 /**
- * Bookmark-AI Bookmarklet (Source)
+ * Bookmark-AI Bookmarklet (Source) - Mobile-Friendly Version
  *
  * This is the readable source code for the bookmarklet.
+ * Works on iOS Safari and all mobile browsers by using a redirect approach
+ * instead of popups (which are often blocked on mobile).
+ *
  * To use this as a bookmarklet, you need to:
  * 1. Minify the code
  * 2. Replace WORKER_URL with your deployed Cloudflare Worker URL
@@ -19,148 +22,6 @@
     const API_KEY = 'YOUR_API_KEY';
     const currentUrl = window.location.href;
     const currentTitle = document.title;
-
-    // Listen for messages from the bridge popup
-    const messageListener = function(event) {
-        // Only accept messages from our bridge origin
-        if (event.origin !== WORKER_URL.replace(/\/$/, '')) {
-            return;
-        }
-
-        if (event.data.type === 'BOOKMARK_AI_RESPONSE') {
-            handleApiResponse(event.data);
-            // Clean up listener
-            window.removeEventListener('message', messageListener);
-        }
-    };
-    window.addEventListener('message', messageListener);
-
-    // Function to send request to bridge via popup
-    function sendToBridge(url, title, createTodoistTask) {
-        // Encode parameters for URL
-        const params = new URLSearchParams({
-            url: url,
-            title: title,
-            todoist: createTodoistTask.toString(),
-            apiKey: API_KEY
-        });
-
-        // Open popup window with parameters
-        const bridgeUrl = WORKER_URL + '/bridge?' + params.toString();
-        const popup = window.open(
-            bridgeUrl,
-            'bookmark-ai-bridge',
-            'width=400,height=300,left=100,top=100'
-        );
-
-        // Check if popup was blocked
-        if (!popup) {
-            const modal = document.querySelector('#bookmark-ai-overlay div');
-            if (modal) {
-                modal.innerHTML = `
-                    <div>
-                        <h2 style="color:#ef4444;margin-bottom:20px;">Popup Blocked</h2>
-                        <p style="margin-bottom:20px;">Please allow popups for this bookmarklet to work.</p>
-                        <button class="bookmark-ai-close-btn"
-                                style="background:#ef4444;color:white;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;width:100%;">
-                            Close
-                        </button>
-                    </div>
-                `;
-            }
-        }
-    }
-
-    // Function to handle API response
-    function handleApiResponse(response) {
-        const modal = document.querySelector('#bookmark-ai-overlay div');
-        if (!modal) return;
-
-        if (response.success && response.data.success && response.data.data) {
-            const result = response.data.data;
-            const categories = result.categories ? result.categories.join(', ') : 'N/A';
-            const matchedCategory = result.matchedCategory || 'N/A';
-            const instapaperStatus = result.instapaper?.saved ?
-                '<span style="color:#10b981;">✓ Saved</span>' :
-                result.instapaper?.error ?
-                '<span style="color:#ef4444;">✗ Error</span>' :
-                '<span style="color:#6b7280;">Not saved</span>';
-
-            const todoistStatus = result.todoist?.created ?
-                '<span style="color:#10b981;">✓ Task created</span>' :
-                result.todoist?.error ?
-                '<span style="color:#ef4444;">✗ Error: ' + result.todoist.error + '</span>' :
-                null;
-
-            modal.innerHTML = `
-                <div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                        <h2 style="color:#667eea;margin:0;">Analysis</h2>
-                        <button class="bookmark-ai-close-btn"
-                                style="background:#ef4444;color:white;border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:20px;">×</button>
-                    </div>
-
-                    <div style="margin-bottom:15px;">
-                        <strong style="color:#764ba2;">Title:</strong>
-                        <p style="margin:5px 0 0 0;">${result.title}</p>
-                    </div>
-
-                    <div style="margin-bottom:15px;">
-                        <strong style="color:#764ba2;">Content Type:</strong>
-                        <p style="margin:5px 0 0 0;">
-                            <span style="background:#e6f7ff;padding:4px 8px;border-radius:4px;">${result.contentType}</span>
-                        </p>
-                    </div>
-
-                    <div style="margin-bottom:15px;">
-                        <strong style="color:#764ba2;">Summary:</strong>
-                        <p style="margin:5px 0 0 0;">${result.summary}</p>
-                    </div>
-
-                    <div style="margin-bottom:15px;">
-                        <strong style="color:#764ba2;">Categories:</strong>
-                        <p style="margin:5px 0 0 0;">${categories}</p>
-                    </div>
-
-                    ${result.matchedCategory ? `
-                    <div style="margin-bottom:15px;">
-                        <strong style="color:#764ba2;">Matched:</strong>
-                        <p style="margin:5px 0 0 0;font-family:monospace;font-size:0.9em;">${matchedCategory}</p>
-                    </div>
-                    ` : ''}
-
-                    <div style="margin-bottom:15px;">
-                        <strong style="color:#764ba2;">Instapaper:</strong>
-                        <p style="margin:5px 0 0 0;">${instapaperStatus}</p>
-                    </div>
-
-                    ${todoistStatus ? `
-                    <div style="margin-bottom:15px;">
-                        <strong style="color:#764ba2;">Todoist:</strong>
-                        <p style="margin:5px 0 0 0;">${todoistStatus}</p>
-                    </div>
-                    ` : ''}
-
-                    <button class="bookmark-ai-close-btn"
-                            style="background:#667eea;color:white;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;width:100%;margin-top:20px;">
-                        Close
-                    </button>
-                </div>
-            `;
-        } else {
-            const errorMessage = response.error || response.data?.error || 'Failed to analyze';
-            modal.innerHTML = `
-                <div>
-                    <h2 style="color:#ef4444;margin-bottom:20px;">Error</h2>
-                    <p style="margin-bottom:20px;">${errorMessage}</p>
-                    <button class="bookmark-ai-close-btn"
-                            style="background:#ef4444;color:white;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;width:100%;">
-                        Close
-                    </button>
-                </div>
-            `;
-        }
-    }
 
     // Create modal overlay
     const overlay = document.createElement('div');
@@ -204,25 +65,22 @@
         }
     });
 
-    // Handle analyze button click
+    // Handle analyze button click - redirect to bridge page
     document.getElementById('analyze-btn').addEventListener('click', function() {
         const createTodoistTask = document.getElementById('todoist-checkbox').checked;
 
-        // Show loading state
-        modal.innerHTML = `
-            <div style="text-align:center;">
-                <h2 style="color:#667eea;margin-bottom:20px;">Analyzing...</h2>
-                <div style="border:4px solid #f3f3f3;border-top:4px solid #667eea;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;margin:20px auto;"></div>
-            </div>
-            <style>
-                @keyframes spin {
-                    0% { transform: rotate(0deg); }
-                    100% { transform: rotate(360deg); }
-                }
-            </style>
-        `;
+        // Build bridge URL with parameters
+        const params = new URLSearchParams({
+            url: currentUrl,
+            title: currentTitle,
+            todoist: createTodoistTask.toString(),
+            apiKey: API_KEY,
+            returnUrl: currentUrl
+        });
 
-        // Send request via bridge to bypass CSP
-        sendToBridge(currentUrl, currentTitle, createTodoistTask);
+        const bridgeUrl = WORKER_URL + '/bridge?' + params.toString();
+
+        // Redirect to bridge page (works on all mobile browsers)
+        window.location.href = bridgeUrl;
     });
 })();
