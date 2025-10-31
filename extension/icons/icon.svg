@@ -1,11 +1,11 @@
 <svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
   <!-- Background circle -->
-  <circle cx="64" cy="64" r="60" fill="#0066cc"/>
+  <circle cx="64" cy="64" r="63" fill="#0066cc"/>
 
-  <!-- Bookmark icon -->
-  <path d="M50 35C47.7909 35 46 36.7909 46 39V93L64 81L82 93V39C82 36.7909 80.2091 35 78 35H50Z" fill="white"/>
+  <!-- Bookmark icon (scaled up ~15%) -->
+  <path d="M46 30C43.2386 30 41 32.2386 41 35V98L64 84L87 98V35C87 32.2386 84.7614 30 82 30H46Z" fill="white"/>
 
-  <!-- AI sparkle -->
-  <circle cx="84" cy="44" r="8" fill="#FFD700"/>
-  <path d="M84 36 L84 52 M76 44 L92 44" stroke="white" stroke-width="2" stroke-linecap="round"/>
+  <!-- AI sparkle (scaled up and repositioned) -->
+  <circle cx="88" cy="40" r="10" fill="#FFD700"/>
+  <path d="M88 30 L88 50 M78 40 L98 40" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
 </svg>
