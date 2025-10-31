@@ -15,3 +15,9 @@ INSTAPAPER_PASSWORD=your-instapaper-password
 # Get your API token from: https://app.todoist.com/app/settings/integrations/developer
 # Required for creating tasks in Todoist when using the bookmarklet
 TODOIST_API_TOKEN=your-todoist-api-token-here
+
+# Extension/Bookmarklet API Key
+# Create a secure random string to authenticate requests from your browser extension or bookmarklet
+# This key must be configured in both the Worker (here) and the bookmarklet/extension code
+# Generate a secure key using: openssl rand -hex 32
+EXTENSION_API_KEY=your-extension-api-key-here

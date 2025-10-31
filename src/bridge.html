@@ -43,6 +43,9 @@
         // This page acts as a bridge to bypass CSP restrictions
         // It receives the request via URL parameters or postMessage and makes API requests
 
+        // Configuration - replace with your EXTENSION_API_KEY from Cloudflare Worker secrets
+        const API_KEY = 'YOUR_API_KEY';
+
         async function processBookmark(url, title, createTodoistTask) {
             try {
                 // Get the API URL from the current page's origin
@@ -52,6 +55,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'X-API-Key': API_KEY,
                     },
                     body: JSON.stringify({
                         url: url,
