@@ -21,21 +21,13 @@ A Chrome extension that uses AI to automatically categorize and organize your bo
 
 ### Install the Extension
 
-1. **Generate Icons** (if not already done):
-   ```bash
-   cd extension
-   node generate-icons.js
-   ```
-
-   For production-quality icons, see `icons/GENERATE_ICONS.md`
-
-2. **Load in Chrome**:
+1. **Load in Chrome**:
    - Open Chrome and go to `chrome://extensions/`
    - Enable "Developer mode" (toggle in top-right corner)
    - Click "Load unpacked"
    - Select the `extension` directory from this project
 
-3. **Configure Settings** (Required):
+2. **Configure Settings** (Required):
    - Click the extension icon in your toolbar
    - Click "Extension Settings" at the bottom of the popup
    - Enter your API endpoint URL (e.g., `https://bookmark-ai.your-account.workers.dev`)
@@ -148,14 +140,13 @@ extension/
 ├── background.js          # Service worker (handles API calls & bookmarks)
 ├── options.html           # Settings page UI
 ├── options.js             # Settings page logic
-├── generate-icons.js      # Script to generate placeholder icons
 ├── icons/                 # Extension icons
 │   ├── icon16.png
 │   ├── icon32.png
 │   ├── icon48.png
 │   ├── icon128.png
-│   ├── icon.svg          # Source icon design
-│   └── GENERATE_ICONS.md # Instructions for creating proper icons
+│   ├── image.png         # Source logo
+│   └── icon.svg          # Source icon design
 └── README.md             # This file
 ```
 
@@ -209,7 +200,6 @@ The extension requires these permissions:
 - Make sure you deployed using `npm run deploy` or via GitHub Actions
 
 ### Extension doesn't load
-- Make sure icons are generated (`node generate-icons.js`)
 - Check for errors in `chrome://extensions/` with Developer mode enabled
 
 ### Bookmarks not being created
