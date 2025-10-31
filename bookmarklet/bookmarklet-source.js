@@ -4,17 +4,19 @@
  * This is the readable source code for the bookmarklet.
  * To use this as a bookmarklet, you need to:
  * 1. Minify the code
- * 2. Replace API_URL with your deployed Cloudflare Worker URL
- * 3. Prefix with 'javascript:'
- * 4. URL-encode if needed (though most browsers handle this)
+ * 2. Replace WORKER_URL with your deployed Cloudflare Worker URL
+ * 3. Replace API_KEY with your API key
+ * 4. Prefix with 'javascript:'
+ * 5. URL-encode if needed (though most browsers handle this)
  *
  * Or use the pre-built version:
  * - bookmarklet-production.js (template for your production URL)
  */
 
 (function() {
-    // Configuration - replace with your deployed Cloudflare Worker URL
+    // Configuration - replace with your deployed Cloudflare Worker URL and API key
     const WORKER_URL = 'YOUR_WORKER_URL';
+    const API_KEY = 'YOUR_API_KEY';
     const currentUrl = window.location.href;
     const currentTitle = document.title;
 
@@ -39,7 +41,8 @@
         const params = new URLSearchParams({
             url: url,
             title: title,
-            todoist: createTodoistTask.toString()
+            todoist: createTodoistTask.toString(),
+            apiKey: API_KEY
         });
 
         // Open popup window with parameters

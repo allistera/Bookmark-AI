@@ -43,16 +43,23 @@
         // This page acts as a bridge to bypass CSP restrictions
         // It receives the request via URL parameters or postMessage and makes API requests
 
-        async function processBookmark(url, title, createTodoistTask) {
+        async function processBookmark(url, title, createTodoistTask, apiKey) {
             try {
                 // Get the API URL from the current page's origin
                 const apiUrl = window.location.origin + '/api/bookmarks';
 
+                const headers = {
+                    'Content-Type': 'application/json',
+                };
+
+                // Add API key header if provided
+                if (apiKey) {
+                    headers['X-API-Key'] = apiKey;
+                }
+
                 const response = await fetch(apiUrl, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: headers,
                     body: JSON.stringify({
                         url: url,
                         title: title,
@@ -98,16 +105,17 @@
         const bookmarkUrl = urlParams.get('url');
         const bookmarkTitle = urlParams.get('title');
         const createTodoistTask = urlParams.get('todoist') === 'true';
+        const apiKey = urlParams.get('apiKey');
 
         if (bookmarkUrl) {
             // Process immediately if URL is provided
-            processBookmark(bookmarkUrl, bookmarkTitle, createTodoistTask);
+            processBookmark(bookmarkUrl, bookmarkTitle, createTodoistTask, apiKey);
         } else {
             // Listen for messages from the opener
             window.addEventListener('message', async function(event) {
                 if (event.data.type === 'BOOKMARK_AI_REQUEST') {
-                    const { url, title, createTodoistTask } = event.data;
-                    await processBookmark(url, title, createTodoistTask);
+                    const { url, title, createTodoistTask, apiKey } = event.data;
+                    await processBookmark(url, title, createTodoistTask, apiKey);
                 }
             });
 
