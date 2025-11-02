@@ -1,0 +1,35 @@
+{
+  "name": "bookmark-ai-api",
+  "version": "1.0.0",
+  "description": "Multi-user authentication API for Bookmark-AI",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "tsc",
+    "test": "vitest",
+    "lint": "eslint src",
+    "type-check": "tsc --noEmit",
+    "migrate:local": "wrangler d1 execute bookmark-ai --local --file=./src/db/migrations/001_initial_schema.sql",
+    "migrate:prod": "wrangler d1 execute bookmark-ai --file=./src/db/migrations/001_initial_schema.sql"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.67.0",
+    "hono": "^4.0.0",
+    "jose": "^5.2.0",
+    "bcryptjs": "^2.4.3",
+    "zod": "^3.22.0",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241022.0",
+    "@types/bcryptjs": "^2.4.6",
+    "typescript": "^5.3.3",
+    "wrangler": "^4.0.0",
+    "vitest": "^1.0.0",
+    "eslint": "^8.56.0",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0"
+  }
+}
