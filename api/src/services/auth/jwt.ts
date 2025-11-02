@@ -83,7 +83,7 @@ export async function verifyToken(
   try {
     const { payload } = await jwtVerify(token, secret);
     return payload as unknown as JWTPayload;
-  } catch (error) {
+  } catch {
     throw new Error('Invalid or expired token');
   }
 }

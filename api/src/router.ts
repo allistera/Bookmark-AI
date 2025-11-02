@@ -35,7 +35,7 @@ import {
 export async function router(
   request: Request,
   env: Env,
-  ctx: ExecutionContext
+  _ctx: ExecutionContext
 ): Promise<Response> {
   const url = new URL(request.url);
   const origin = request.headers.get('Origin');
@@ -191,7 +191,7 @@ export async function router(
     } else if (error && typeof error === 'object' && 'name' in error) {
       if (error.name === 'ValidationError') {
         statusCode = 400;
-        message = (error as any).message || 'Validation failed';
+        message = (error as Record<string, unknown>).message || 'Validation failed';
       }
     }
 

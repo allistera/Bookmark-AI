@@ -38,7 +38,7 @@ export function errorResponse(
   };
 
   if (code) {
-    (response as any).code = code;
+    (response as Record<string, unknown>).code = code;
   }
 
   return new Response(JSON.stringify(response), {
@@ -54,7 +54,7 @@ export function errorResponse(
  */
 export function validationErrorResponse(
   message: string,
-  errors: any
+  errors: unknown
 ): Response {
   const response = {
     success: false,

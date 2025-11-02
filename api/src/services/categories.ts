@@ -76,7 +76,7 @@ export function validateCategoryTree(tree: unknown): tree is CategoryTree {
   }
 
   // Recursively check structure
-  function isValid(obj: any): boolean {
+  function isValid(obj: unknown): boolean {
     for (const key in obj) {
       const value = obj[key];
       if (Array.isArray(value)) {

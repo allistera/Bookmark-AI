@@ -9,7 +9,7 @@ import { APIKeyRepository } from '../db/repositories/apiKeyRepository';
 import { RefreshTokenRepository } from '../db/repositories/refreshTokenRepository';
 import { verifyPassword, hashPassword } from '../services/auth/password';
 import { generateAPIKey } from '../services/auth/apiKeys';
-import { encrypt, decrypt } from '../services/encryption';
+import { encrypt } from '../services/encryption';
 import {
   successResponse,
   noContentResponse,

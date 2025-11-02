@@ -2,7 +2,6 @@
  * API Key generation and hashing
  */
 
-import { Env } from '../../types/env';
 
 const API_KEY_PREFIX = 'bkm_';
 const API_KEY_LENGTH = 40;

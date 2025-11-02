@@ -5,13 +5,13 @@
 import { Category, CategoryTree } from '../../types/user';
 
 export class CategoryRepository {
-  constructor(private db: D1Database) {}
+  constructor(private readonly _db: D1Database) {}
 
   /**
    * Find category by user ID
    */
   async findByUserId(userId: string): Promise<Category | null> {
-    const result = await this.db
+    const result = await this._db
       .prepare('SELECT * FROM categories WHERE user_id = ?')
       .bind(userId)
       .first();
@@ -27,7 +27,7 @@ export class CategoryRepository {
     const id = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
     const now = Math.floor(Date.now() / 1000);
 
-    await this.db
+    await this._db
       .prepare(
         `INSERT INTO categories (id, user_id, category_tree, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?)`
@@ -44,7 +44,7 @@ export class CategoryRepository {
    * Update category tree for user
    */
   async update(userId: string, categoryTree: CategoryTree): Promise<Category> {
-    await this.db
+    await this._db
       .prepare(
         `UPDATE categories
          SET category_tree = ?, updated_at = unixepoch()
@@ -62,7 +62,7 @@ export class CategoryRepository {
    * Delete category tree for user
    */
   async delete(userId: string): Promise<void> {
-    await this.db
+    await this._db
       .prepare('DELETE FROM categories WHERE user_id = ?')
       .bind(userId)
       .run();
@@ -71,7 +71,7 @@ export class CategoryRepository {
   /**
    * Map database row to Category object
    */
-  private mapToCategory(row: any): Category {
+  private mapToCategory(row: Record<string, unknown>): Category {
     return {
       id: row.id,
       userId: row.user_id,

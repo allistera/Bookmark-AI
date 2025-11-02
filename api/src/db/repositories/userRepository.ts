@@ -3,16 +3,15 @@
  */
 
 import { User, UserSettings } from '../../types/user';
-import { Env } from '../../types/env';
 
 export class UserRepository {
-  constructor(private db: D1Database) {}
+  constructor(private readonly _db: D1Database) {}
 
   /**
    * Find user by email
    */
   async findByEmail(email: string): Promise<User | null> {
-    const result = await this.db
+    const result = await this._db
       .prepare('SELECT * FROM users WHERE email = ? COLLATE NOCASE')
       .bind(email.toLowerCase())
       .first();
@@ -25,7 +24,7 @@ export class UserRepository {
    * Find user by ID
    */
   async findById(id: string): Promise<User | null> {
-    const result = await this.db
+    const result = await this._db
       .prepare('SELECT * FROM users WHERE id = ?')
       .bind(id)
       .first();
@@ -45,7 +44,7 @@ export class UserRepository {
     const id = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
     const now = Math.floor(Date.now() / 1000);
 
-    await this.db
+    await this._db
       .prepare(
         `INSERT INTO users (id, email, password_hash, full_name, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?)`
@@ -82,7 +81,7 @@ export class UserRepository {
       ...settings,
     };
 
-    await this.db
+    await this._db
       .prepare(
         `UPDATE users
          SET settings = ?, updated_at = unixepoch()
@@ -100,7 +99,7 @@ export class UserRepository {
     data: { fullName?: string }
   ): Promise<void> {
     const updates: string[] = [];
-    const bindings: any[] = [];
+    const bindings: unknown[] = [];
 
     if (data.fullName !== undefined) {
       updates.push('full_name = ?');
@@ -112,7 +111,7 @@ export class UserRepository {
     updates.push('updated_at = unixepoch()');
     bindings.push(userId);
 
-    await this.db
+    await this._db
       .prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`)
       .bind(...bindings)
       .run();
@@ -122,7 +121,7 @@ export class UserRepository {
    * Update last login timestamp
    */
   async updateLastLogin(userId: string): Promise<void> {
-    await this.db
+    await this._db
       .prepare(
         `UPDATE users
          SET last_login_at = unixepoch()
@@ -136,7 +135,7 @@ export class UserRepository {
    * Update user password
    */
   async updatePassword(userId: string, passwordHash: string): Promise<void> {
-    await this.db
+    await this._db
       .prepare(
         `UPDATE users
          SET password_hash = ?, updated_at = unixepoch()
@@ -150,7 +149,7 @@ export class UserRepository {
    * Check if email exists
    */
   async emailExists(email: string): Promise<boolean> {
-    const result = await this.db
+    const result = await this._db
       .prepare('SELECT 1 FROM users WHERE email = ? COLLATE NOCASE')
       .bind(email.toLowerCase())
       .first();
@@ -162,7 +161,7 @@ export class UserRepository {
    * Deactivate user account
    */
   async deactivate(userId: string): Promise<void> {
-    await this.db
+    await this._db
       .prepare('UPDATE users SET is_active = 0 WHERE id = ?')
       .bind(userId)
       .run();
@@ -171,7 +170,7 @@ export class UserRepository {
   /**
    * Map database row to User object
    */
-  private mapToUser(row: any): User {
+  private mapToUser(row: Record<string, unknown>): User {
     return {
       id: row.id,
       email: row.email,

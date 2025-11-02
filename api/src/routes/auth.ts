@@ -13,7 +13,6 @@ import { getDefaultCategoryTree } from '../services/categories';
 import { sha256 } from '../utils/crypto';
 import {
   successResponse,
-  errorResponse,
   noContentResponse,
 } from '../utils/responses';
 import {
@@ -26,7 +25,6 @@ import {
   ForbiddenError,
   UnauthorizedError,
   ConflictError,
-  ValidationError,
 } from '../utils/errors';
 import { rateLimit } from '../middleware/rateLimit';
 
@@ -230,7 +228,7 @@ export async function handleRefresh(
 export async function handleLogout(
   request: Request,
   env: Env,
-  user: User
+  _user: User
 ): Promise<Response> {
   // Validate request
   const data = await validateRequest(request, RefreshSchema);

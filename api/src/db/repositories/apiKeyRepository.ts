@@ -5,13 +5,13 @@
 import { APIKey, PublicAPIKey } from '../../types/user';
 
 export class APIKeyRepository {
-  constructor(private db: D1Database) {}
+  constructor(private readonly _db: D1Database) {}
 
   /**
    * Find API key by hash
    */
   async findByHash(keyHash: string): Promise<APIKey | null> {
-    const result = await this.db
+    const result = await this._db
       .prepare(
         `SELECT * FROM api_keys
          WHERE key_hash = ? AND is_active = 1
@@ -28,7 +28,7 @@ export class APIKeyRepository {
    * Find all API keys for a user
    */
   async findByUserId(userId: string): Promise<APIKey[]> {
-    const results = await this.db
+    const results = await this._db
       .prepare(
         `SELECT * FROM api_keys
          WHERE user_id = ?
@@ -53,7 +53,7 @@ export class APIKeyRepository {
     const id = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
     const now = Math.floor(Date.now() / 1000);
 
-    await this.db
+    await this._db
       .prepare(
         `INSERT INTO api_keys (id, user_id, key_hash, key_prefix, name, expires_at, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)`
@@ -69,7 +69,7 @@ export class APIKeyRepository {
       )
       .run();
 
-    const apiKey = await this.db
+    const apiKey = await this._db
       .prepare('SELECT * FROM api_keys WHERE id = ?')
       .bind(id)
       .first();
@@ -82,7 +82,7 @@ export class APIKeyRepository {
    * Update last used timestamp
    */
   async updateLastUsed(keyHash: string): Promise<void> {
-    await this.db
+    await this._db
       .prepare(
         `UPDATE api_keys
          SET last_used_at = unixepoch()
@@ -96,7 +96,7 @@ export class APIKeyRepository {
    * Revoke (deactivate) an API key
    */
   async revoke(keyId: string, userId: string): Promise<void> {
-    await this.db
+    await this._db
       .prepare(
         `UPDATE api_keys
          SET is_active = 0
@@ -110,7 +110,7 @@ export class APIKeyRepository {
    * Delete an API key
    */
   async delete(keyId: string, userId: string): Promise<void> {
-    await this.db
+    await this._db
       .prepare('DELETE FROM api_keys WHERE id = ? AND user_id = ?')
       .bind(keyId, userId)
       .run();
@@ -119,7 +119,7 @@ export class APIKeyRepository {
   /**
    * Map database row to APIKey object
    */
-  private mapToAPIKey(row: any): APIKey {
+  private mapToAPIKey(row: Record<string, unknown>): APIKey {
     return {
       id: row.id,
       userId: row.user_id,

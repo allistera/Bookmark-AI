@@ -42,7 +42,7 @@ export async function authenticate(
       }
 
       return user;
-    } catch (error) {
+    } catch {
       throw new UnauthorizedError('Invalid or expired token');
     }
   }

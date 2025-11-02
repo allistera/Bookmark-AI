@@ -5,13 +5,13 @@
 import { RefreshToken } from '../../types/user';
 
 export class RefreshTokenRepository {
-  constructor(private db: D1Database) {}
+  constructor(private readonly _db: D1Database) {}
 
   /**
    * Find refresh token by hash
    */
   async findByHash(tokenHash: string): Promise<RefreshToken | null> {
-    const result = await this.db
+    const result = await this._db
       .prepare(
         `SELECT * FROM refresh_tokens
          WHERE token_hash = ? AND revoked = 0 AND expires_at > unixepoch()`
@@ -34,7 +34,7 @@ export class RefreshTokenRepository {
     const id = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
     const now = Math.floor(Date.now() / 1000);
 
-    await this.db
+    await this._db
       .prepare(
         `INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at, created_at)
          VALUES (?, ?, ?, ?, ?)`
@@ -42,7 +42,7 @@ export class RefreshTokenRepository {
       .bind(id, data.userId, data.tokenHash, data.expiresAt, now)
       .run();
 
-    const token = await this.db
+    const token = await this._db
       .prepare('SELECT * FROM refresh_tokens WHERE id = ?')
       .bind(id)
       .first();
@@ -55,7 +55,7 @@ export class RefreshTokenRepository {
    * Revoke a refresh token
    */
   async revoke(tokenHash: string): Promise<void> {
-    await this.db
+    await this._db
       .prepare(
         `UPDATE refresh_tokens
          SET revoked = 1
@@ -69,7 +69,7 @@ export class RefreshTokenRepository {
    * Revoke all refresh tokens for a user
    */
   async revokeAllForUser(userId: string): Promise<void> {
-    await this.db
+    await this._db
       .prepare(
         `UPDATE refresh_tokens
          SET revoked = 1
@@ -83,7 +83,7 @@ export class RefreshTokenRepository {
    * Delete expired tokens (cleanup)
    */
   async deleteExpired(): Promise<void> {
-    await this.db
+    await this._db
       .prepare('DELETE FROM refresh_tokens WHERE expires_at < unixepoch()')
       .run();
   }
@@ -91,7 +91,7 @@ export class RefreshTokenRepository {
   /**
    * Map database row to RefreshToken object
    */
-  private mapToRefreshToken(row: any): RefreshToken {
+  private mapToRefreshToken(row: Record<string, unknown>): RefreshToken {
     return {
       id: row.id,
       userId: row.user_id,

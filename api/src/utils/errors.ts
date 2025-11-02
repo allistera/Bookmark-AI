@@ -59,7 +59,7 @@ export class InternalServerError extends AppError {
 export class ValidationError extends BadRequestError {
   constructor(
     message: string = 'Validation failed',
-    public errors?: any
+    public errors?: unknown
   ) {
     super(message, 'VALIDATION_ERROR');
     this.errors = errors;
