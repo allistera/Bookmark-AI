@@ -211,7 +211,7 @@ async function createTodoistTask(url, title, summary, apiToken) {
       }),
     });
 
-    if (response.status === 200) {
+    if (response.status === 200 || response.status === 201) {
       // Successfully created
       const taskData = await response.json();
       return { success: true, taskId: taskData.id };
