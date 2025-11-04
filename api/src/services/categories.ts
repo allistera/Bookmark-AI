@@ -78,8 +78,8 @@ export function validateCategoryTree(tree: unknown): tree is CategoryTree {
   // Recursively check structure
   function isValid(obj: unknown): boolean {
     for (const key in obj) {
+      if (!Object.prototype.hasOwnProperty.call(obj, key)) continue;
       const value = obj[key];
-      if (Array.isArray(value)) {
         // Leaf node - should be array of strings
         if (!value.every((item) => typeof item === 'string')) {
           return false;
