@@ -2,6 +2,9 @@
 // We'll use importScripts for the service worker
 importScripts('bookmark_format.js');
 
+// Maximum HTML content length to send to Claude API to keep token usage reasonable
+const MAX_HTML_CONTENT_LENGTH = 8000;
+
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'analyzeBookmark') {
@@ -44,9 +47,9 @@ async function analyzeBookmark(url, apiKey, providedTitle) {
   let htmlContent = null;
   if (!providedTitle) {
     htmlContent = await fetchHtmlContent(url);
-    // Truncate HTML to first 8000 characters to keep token usage reasonable
-    if (htmlContent && htmlContent.length > 8000) {
-      htmlContent = htmlContent.substring(0, 8000) + '\n... [content truncated]';
+    // Truncate HTML to keep token usage reasonable
+    if (htmlContent && htmlContent.length > MAX_HTML_CONTENT_LENGTH) {
+      htmlContent = htmlContent.substring(0, MAX_HTML_CONTENT_LENGTH) + '\n... [content truncated]';
     }
   }
 
@@ -61,7 +64,7 @@ async function analyzeBookmark(url, apiKey, providedTitle) {
 5. 2-3 relevant categories or tags
 
 URL: ${url}
-${htmlContent ? `\nHTML Content (first 8000 chars):\n${htmlContent}` : ''}
+${htmlContent ? `\nHTML Content (first ${MAX_HTML_CONTENT_LENGTH} chars):\n${htmlContent}` : ''}
 
 ${!url.includes('article') && !url.includes('blog') && !url.includes('post') ? `
 Additionally, if this is NOT an article, you MUST match it to exactly ONE category - the single best match from this list:
