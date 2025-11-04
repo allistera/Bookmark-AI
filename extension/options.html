@@ -173,32 +173,59 @@
 
     <form id="settingsForm">
       <div class="form-group">
-        <label for="apiEndpoint">API Endpoint</label>
+        <label for="anthropicApiKey">Claude API Key (Required)</label>
         <div class="description">
-          The URL of your Bookmark AI API server (Cloudflare Worker)
+          Your Anthropic API key for Claude AI. Get it from <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a>
         </div>
         <input
-          type="url"
-          id="apiEndpoint"
-          name="apiEndpoint"
+          type="password"
+          id="anthropicApiKey"
+          name="anthropicApiKey"
           class="code-input"
-          placeholder="https://bookmark-ai.your-domain.workers.dev"
+          placeholder="sk-ant-..."
           required
         />
       </div>
 
       <div class="form-group">
-        <label for="apiKey">API Key</label>
+        <label for="instapaperUsername">Instapaper Username (Optional)</label>
         <div class="description">
-          Your API key for authenticating with the worker. This should match the EXTENSION_API_KEY configured in your Cloudflare Worker.
+          Your Instapaper email address. Articles will be automatically saved to Instapaper if configured.
+        </div>
+        <input
+          type="text"
+          id="instapaperUsername"
+          name="instapaperUsername"
+          class="code-input"
+          placeholder="your-email@example.com"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="instapaperPassword">Instapaper Password (Optional)</label>
+        <div class="description">
+          Your Instapaper account password.
         </div>
         <input
           type="password"
-          id="apiKey"
-          name="apiKey"
+          id="instapaperPassword"
+          name="instapaperPassword"
           class="code-input"
-          placeholder="your-secret-api-key"
-          required
+          placeholder="your-instapaper-password"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="todoistApiToken">Todoist API Token (Optional)</label>
+        <div class="description">
+          Your Todoist API token. Get it from <a href="https://todoist.com/app/settings/integrations" target="_blank">Todoist Settings → Integrations</a>
+        </div>
+        <input
+          type="password"
+          id="todoistApiToken"
+          name="todoistApiToken"
+          class="code-input"
+          placeholder="your-todoist-api-token"
         />
       </div>
 
@@ -211,23 +238,30 @@
     </form>
 
     <div class="info-box">
-      <strong>How to get your API endpoint and key:</strong>
-      1. Deploy your Bookmark AI backend to Cloudflare Workers (see the project README)<br>
-      2. Your API endpoint URL will be: <code>https://bookmark-ai.[YOUR-ACCOUNT].workers.dev</code><br>
-      3. Set the <code>EXTENSION_API_KEY</code> secret in your Cloudflare Worker or GitHub repository secrets<br>
-      4. Enter the same API key in the "API Key" field above<br>
+      <strong>How to get your API keys:</strong>
+      <br><br>
+      <strong>1. Claude API Key (Required):</strong><br>
+      • Visit <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a><br>
+      • Create an account or sign in<br>
+      • Go to API Keys section and create a new key<br>
+      • Copy the key starting with <code>sk-ant-...</code><br>
       <br>
-      <strong>To deploy:</strong><br>
-      • Run <code>npm run deploy</code> in the project directory, OR<br>
-      • Push to the <code>main</code> branch to trigger automatic deployment via GitHub Actions<br>
+      <strong>2. Instapaper (Optional - for auto-saving articles):</strong><br>
+      • Create an account at <a href="https://www.instapaper.com/" target="_blank">instapaper.com</a><br>
+      • Use your email and password in the fields above<br>
       <br>
-      <strong>Security Note:</strong> Keep your API key secret! It authenticates your extension with the worker.
+      <strong>3. Todoist (Optional - for creating tasks):</strong><br>
+      • Go to <a href="https://todoist.com/app/settings/integrations" target="_blank">Todoist Settings → Integrations</a><br>
+      • Copy your API token from the Developer section<br>
+      <br>
+      <strong>Security Note:</strong> Your API keys are stored locally in your browser using Chrome's sync storage. They are never sent anywhere except directly to the respective services (Claude, Instapaper, Todoist).
     </div>
 
     <div class="info-box">
       <strong>About Bookmark AI:</strong>
       This extension uses AI to automatically categorize and organize your bookmarks.
-      It analyzes web pages and places them in the appropriate folder hierarchy.
+      It analyzes web pages using Claude AI and places them in the appropriate folder hierarchy.
+      Articles are automatically saved to Instapaper if configured.
       <br><br>
       For more information, visit the
       <a href="https://github.com/allistera/Bookmark-AI" target="_blank">GitHub repository</a>.
