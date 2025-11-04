@@ -9,6 +9,11 @@
     "storage",
     "contextMenus"
   ],
+  "host_permissions": [
+    "https://api.anthropic.com/*",
+    "https://www.instapaper.com/*",
+    "https://api.todoist.com/*"
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
