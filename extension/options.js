@@ -59,10 +59,10 @@ async function saveSettings(event) {
   // Save to storage
   try {
     await chrome.storage.sync.set({
-      anthropicApiKey: anthropicApiKey,
-      instapaperUsername: instapaperUsername,
-      instapaperPassword: instapaperPassword,
-      todoistApiToken: todoistApiToken
+      anthropicApiKey,
+      instapaperUsername,
+      instapaperPassword,
+      todoistApiToken
     });
 
     showStatus('Settings saved successfully!', 'success');
