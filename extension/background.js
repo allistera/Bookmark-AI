@@ -69,8 +69,9 @@ async function handleAnalyzeBookmark({ url, title, createTodoist, autoBookmark }
     let bookmarkCreated = false;
     let bookmarkId = null;
 
-    // If auto-bookmark is enabled, create the bookmark
-    if (autoBookmark) {
+    // If auto-bookmark is enabled and it's not an article, create the bookmark
+    // Articles are saved to Instapaper instead of Chrome bookmarks
+    if (autoBookmark && !result.data.isArticle) {
       const categoryPath = result.data.matchedCategory || 'Other';
       bookmarkId = await createBookmarkInCategory(url, result.data.title || title, categoryPath);
       bookmarkCreated = true;
