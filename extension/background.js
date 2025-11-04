@@ -63,12 +63,10 @@ async function analyzeBookmark(url, apiKey, providedTitle) {
 URL: ${url}
 ${htmlContent ? `\nHTML Content (first 8000 chars):\n${htmlContent}` : ''}
 
-${!url.includes('article') && !url.includes('blog') && !url.includes('post') ? `
-Additionally, if this is NOT an article, you MUST match it to exactly ONE category - the single best match from this list:
+After analyzing the content, if this is NOT an article, you MUST match it to exactly ONE category - the single best match from this list:
 ${availableCategories.join('\n')}
 
 IMPORTANT: Return ONLY ONE category path that best matches the URL content. If none of the categories are appropriate, return "Other".
-` : ''}
 
 Please respond in JSON format:
 {
