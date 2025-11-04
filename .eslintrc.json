@@ -28,6 +28,7 @@
   "ignorePatterns": [
     "node_modules/",
     "dist/",
-    ".wrangler/"
+    ".wrangler/",
+    "api/"
   ]
 }

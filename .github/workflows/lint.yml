@@ -20,8 +20,16 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies
+      - name: Install root dependencies
         run: npm install
 
-      - name: Run linter
+      - name: Run root linter
+        run: npm run lint
+
+      - name: Install API dependencies
+        working-directory: ./api
+        run: npm install
+
+      - name: Run API linter
+        working-directory: ./api
         run: npm run lint
