@@ -16,7 +16,6 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.67.0",
-    "hono": "^4.0.0",
     "jose": "^5.2.0",
     "bcryptjs": "^2.4.3",
     "zod": "^3.22.0",
