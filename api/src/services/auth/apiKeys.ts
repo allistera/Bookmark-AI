@@ -14,10 +14,10 @@ export async function generateAPIKey(): Promise<{
   hash: string;
   prefix: string;
 }> {
-  // Generate random key: bkm_<32 random hex chars>
-  const randomPart = crypto.randomUUID().replace(/-/g, '') +
-                     crypto.randomUUID().replace(/-/g, '');
-
+  // Generate random key: bkm_<40 random hex chars>
+  const randomBytes = new Uint8Array(20);
+  crypto.getRandomValues(randomBytes);
+  const randomPart = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
   const key = (API_KEY_PREFIX + randomPart).slice(0, API_KEY_LENGTH);
   const hash = await hashAPIKey(key);
   const prefix = key.slice(0, 12); // "bkm_12345678"
