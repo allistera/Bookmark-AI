@@ -113,8 +113,7 @@ function displayResults(data) {
     const instapaperStatus = document.getElementById('instapaperStatus');
 
     if (data.instapaper.saved) {
-      instapaperStatus.textContent = `Saved (ID: ${data.instapaper.bookmarkId})`;
-      instapaperStatus.style.color = '#2e7d32';
+      instapaperStatus.innerHTML = '<a href="https://www.instapaper.com/u" target="_blank" style="color: #2e7d32; text-decoration: underline;">Saved</a>';
     } else {
       instapaperStatus.textContent = 'Not saved';
       instapaperStatus.style.color = '#666';
