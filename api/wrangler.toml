@@ -1,0 +1,28 @@
+name = "bookmark-ai-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+node_compat = true
+
+[vars]
+CORS_ALLOWED_ORIGINS = "chrome-extension://*"
+ENVIRONMENT = "production"
+DISABLE_REGISTRATION = "false"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "bookmark-ai"
+database_id = "your-d1-database-id"  # Replace with actual D1 database ID after creation
+
+# To create the database, run:
+# wrangler d1 create bookmark-ai
+
+# Secrets (set via: wrangler secret put SECRET_NAME)
+# Required secrets:
+# - JWT_SECRET (min 32 characters)
+# - ENCRYPTION_KEY (exactly 32 characters for AES-256)
+# - ANTHROPIC_API_KEY
+#
+# Optional secrets (can be per-user now):
+# - INSTAPAPER_USERNAME (legacy, for default/demo)
+# - INSTAPAPER_PASSWORD (legacy, for default/demo)
+# - TODOIST_API_TOKEN (legacy, for default/demo)

@@ -1,0 +1,25 @@
+-- Default category template for new users
+-- This is used as a template when creating new user accounts
+
+-- Note: This is just a reference. The actual default categories are defined
+-- in code (src/services/categories.ts) to allow for easier updates without migrations.
+
+-- Example default structure:
+-- {
+--   "Personal": {
+--     "Reading_List": [],
+--     "Learning": {
+--       "Programming": [],
+--       "Design": [],
+--       "Business": []
+--     },
+--     "Tools": [],
+--     "Inspiration": []
+--   },
+--   "Work": {
+--     "Documentation": [],
+--     "Resources": [],
+--     "Projects": []
+--   },
+--   "Archive": []
+-- }
