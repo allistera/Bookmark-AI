@@ -1,7 +1,9 @@
 // Default settings
 const DEFAULT_SETTINGS = {
-  apiEndpoint: '',
-  apiKey: ''
+  anthropicApiKey: '',
+  instapaperUsername: '',
+  instapaperPassword: '',
+  todoistApiToken: ''
 };
 
 // Load saved settings on page load
@@ -18,8 +20,10 @@ async function loadSettings() {
     const settings = await chrome.storage.sync.get(DEFAULT_SETTINGS);
 
     // Populate form fields
-    document.getElementById('apiEndpoint').value = settings.apiEndpoint;
-    document.getElementById('apiKey').value = settings.apiKey;
+    document.getElementById('anthropicApiKey').value = settings.anthropicApiKey;
+    document.getElementById('instapaperUsername').value = settings.instapaperUsername;
+    document.getElementById('instapaperPassword').value = settings.instapaperPassword;
+    document.getElementById('todoistApiToken').value = settings.todoistApiToken;
   } catch (error) {
     console.error('Error loading settings:', error);
     showStatus('Error loading settings', 'error');
@@ -29,39 +33,30 @@ async function loadSettings() {
 async function saveSettings(event) {
   event.preventDefault();
 
-  const apiEndpoint = document.getElementById('apiEndpoint').value.trim();
-  const apiKey = document.getElementById('apiKey').value.trim();
+  const anthropicApiKey = document.getElementById('anthropicApiKey').value.trim();
+  const instapaperUsername = document.getElementById('instapaperUsername').value.trim();
+  const instapaperPassword = document.getElementById('instapaperPassword').value;
+  const todoistApiToken = document.getElementById('todoistApiToken').value.trim();
 
-  // Validate API endpoint is not empty
-  if (!apiEndpoint || apiEndpoint === '') {
-    showStatus('Please enter an API endpoint URL', 'error');
+  // Validate Anthropic API key is not empty
+  if (!anthropicApiKey || anthropicApiKey === '') {
+    showStatus('Please enter your Anthropic API key', 'error');
     return;
   }
 
-  // Validate API key is not empty
-  if (!apiKey || apiKey === '') {
-    showStatus('Please enter an API key', 'error');
-    return;
-  }
-
-  // Validate URL format
-  try {
-    const url = new URL(apiEndpoint);
-    // Ensure it's https
-    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
-      showStatus('API endpoint must use HTTP or HTTPS protocol', 'error');
-      return;
-    }
-  } catch (error) {
-    showStatus('Please enter a valid URL (e.g., https://bookmark-ai.your-account.workers.dev)', 'error');
+  // Validate API key format (basic check)
+  if (!anthropicApiKey.startsWith('sk-ant-')) {
+    showStatus('Anthropic API key should start with "sk-ant-"', 'error');
     return;
   }
 
   // Save to storage
   try {
     await chrome.storage.sync.set({
-      apiEndpoint: apiEndpoint,
-      apiKey: apiKey
+      anthropicApiKey: anthropicApiKey,
+      instapaperUsername: instapaperUsername,
+      instapaperPassword: instapaperPassword,
+      todoistApiToken: todoistApiToken
     });
 
     showStatus('Settings saved successfully!', 'success');

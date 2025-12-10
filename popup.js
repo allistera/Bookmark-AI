@@ -12,10 +12,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('urlDisplay').textContent = currentUrl;
   }
 
-  // Check if API endpoint is configured
-  const settings = await chrome.storage.sync.get({ apiEndpoint: '' });
-  if (!settings.apiEndpoint || settings.apiEndpoint.trim() === '') {
-    showStatus('⚠️ API endpoint not configured. Click "Extension Settings" below to configure.', 'warning');
+  // Check if Anthropic API key is configured
+  const settings = await chrome.storage.sync.get({ anthropicApiKey: '' });
+  if (!settings.anthropicApiKey || settings.anthropicApiKey.trim() === '') {
+    showStatus('⚠️ Anthropic API key not configured. Click "Extension Settings" below to configure.', 'warning');
     document.getElementById('analyzeBtn').disabled = true;
   }
 
