@@ -12,319 +12,346 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background: #f5f5f5;
-      padding: 40px 20px;
+      font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 13px;
+      color: #202124;
+      background: #f8f9fa;
+      line-height: 1.5;
     }
 
-    .container {
-      max-width: 600px;
+    .page {
+      max-width: 680px;
       margin: 0 auto;
-      background: white;
-      border-radius: 8px;
-      padding: 40px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      padding: 40px 24px;
     }
 
-    h1 {
-      font-size: 28px;
+    .header {
+      margin-bottom: 32px;
+    }
+
+    .header h1 {
+      font-size: 22px;
+      font-weight: 400;
+      color: #202124;
       margin-bottom: 8px;
-      color: #333;
     }
 
-    .subtitle {
-      color: #666;
+    .header p {
       font-size: 14px;
-      margin-bottom: 32px;
+      color: #5f6368;
     }
 
-    .section {
-      margin-bottom: 32px;
-      padding-bottom: 24px;
-      border-bottom: 1px solid #e0e0e0;
-    }
-
-    .section:last-of-type {
-      border-bottom: none;
-      margin-bottom: 0;
-      padding-bottom: 0;
-    }
-
-    .section-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #333;
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      border: 1px solid #dadce0;
       margin-bottom: 16px;
+    }
+
+    .card-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid #dadce0;
       display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: space-between;
     }
 
-    .section-title .badge {
+    .card-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #202124;
+    }
+
+    .badge {
       font-size: 11px;
       padding: 2px 8px;
-      border-radius: 10px;
+      border-radius: 4px;
       font-weight: 500;
     }
 
     .badge.required {
-      background: #ffebee;
-      color: #c62828;
+      background: #fce8e6;
+      color: #c5221f;
     }
 
     .badge.optional {
-      background: #e8f5e9;
-      color: #2e7d32;
+      background: #e6f4ea;
+      color: #137333;
+    }
+
+    .card-body {
+      padding: 24px;
     }
 
     .form-group {
       margin-bottom: 20px;
     }
 
-    label {
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .form-label {
       display: block;
-      font-size: 14px;
-      font-weight: 500;
-      color: #333;
-      margin-bottom: 8px;
-    }
-
-    .description {
       font-size: 13px;
-      color: #666;
+      font-weight: 500;
+      color: #202124;
       margin-bottom: 8px;
     }
 
-    input[type="text"],
-    input[type="url"],
-    input[type="password"] {
+    .form-hint {
+      font-size: 12px;
+      color: #5f6368;
+      margin-bottom: 8px;
+    }
+
+    .form-hint a {
+      color: #1a73e8;
+      text-decoration: none;
+    }
+
+    .form-hint a:hover {
+      text-decoration: underline;
+    }
+
+    .form-input {
       width: 100%;
       padding: 10px 12px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
+      border: 1px solid #dadce0;
+      border-radius: 4px;
       font-size: 14px;
       font-family: inherit;
-      transition: border-color 0.2s;
+      color: #202124;
+      background: #fff;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
 
-    input[type="text"]:focus,
-    input[type="url"]:focus,
-    input[type="password"]:focus {
+    .form-input:focus {
       outline: none;
-      border-color: #0066cc;
+      border-color: #1a73e8;
+      box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
     }
 
-    .code-input {
-      font-family: 'Courier New', monospace;
-      background: #f8f9fa;
+    .form-input::placeholder {
+      color: #80868b;
     }
 
-    .buttons {
+    .form-input.mono {
+      font-family: 'Roboto Mono', monospace;
+      font-size: 13px;
+    }
+
+    .actions {
       display: flex;
       gap: 12px;
-      margin-top: 32px;
+      margin-top: 24px;
     }
 
-    button {
+    .btn {
       padding: 10px 24px;
-      border: none;
-      border-radius: 6px;
+      border-radius: 4px;
       font-size: 14px;
       font-weight: 500;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.1s;
+      border: none;
+      font-family: inherit;
     }
 
     .btn-primary {
-      background: #0066cc;
+      background: #1a73e8;
       color: white;
-      flex: 1;
     }
 
     .btn-primary:hover {
-      background: #0052a3;
+      background: #1557b0;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.3);
     }
 
     .btn-secondary {
-      background: #e9ecef;
-      color: #333;
+      background: #fff;
+      color: #5f6368;
+      border: 1px solid #dadce0;
     }
 
     .btn-secondary:hover {
-      background: #dee2e6;
+      background: #f8f9fa;
+      color: #202124;
     }
 
     .status {
-      padding: 12px;
-      border-radius: 6px;
       margin-top: 16px;
-      font-size: 14px;
+      padding: 12px 16px;
+      border-radius: 4px;
+      font-size: 13px;
       display: none;
     }
 
     .status.visible {
-      display: block;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .status.success {
-      background: #e8f5e9;
-      color: #2e7d32;
+      background: #e6f4ea;
+      color: #137333;
     }
 
     .status.error {
-      background: #ffebee;
-      color: #c62828;
+      background: #fce8e6;
+      color: #c5221f;
     }
 
-    .info-box {
-      background: #e3f2fd;
-      padding: 16px;
-      border-radius: 6px;
-      margin-top: 32px;
+    .info-card {
+      background: #e8f0fe;
+      border: none;
+      padding: 16px 24px;
+    }
+
+    .info-card .info-title {
       font-size: 13px;
-      line-height: 1.6;
-      color: #1565c0;
-    }
-
-    .info-box strong {
-      display: block;
+      font-weight: 500;
+      color: #1967d2;
       margin-bottom: 8px;
-      color: #0d47a1;
     }
 
-    .info-box code {
-      background: rgba(255, 255, 255, 0.7);
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-family: 'Courier New', monospace;
-    }
-
-    .info-box a {
-      color: #1565c0;
-      text-decoration: underline;
-    }
-
-    .warning-box {
-      background: #fff3e0;
-      padding: 16px;
-      border-radius: 6px;
-      margin-top: 16px;
+    .info-card p {
       font-size: 13px;
-      line-height: 1.6;
-      color: #e65100;
+      color: #1967d2;
+      margin-bottom: 8px;
     }
 
-    .warning-box strong {
-      display: block;
+    .info-card p:last-child {
+      margin-bottom: 0;
+    }
+
+    .warning-card {
+      background: #fef7e0;
+      border: none;
+      padding: 16px 24px;
+    }
+
+    .warning-card .warning-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: #b05a00;
       margin-bottom: 8px;
-      color: #bf360c;
+    }
+
+    .warning-card p {
+      font-size: 13px;
+      color: #b05a00;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Bookmark AI Settings</h1>
-    <p class="subtitle">Configure your Bookmark AI extension</p>
+  <div class="page">
+    <div class="header">
+      <h1>Bookmark AI Settings</h1>
+      <p>Configure your API keys and integrations</p>
+    </div>
 
     <form id="settingsForm">
-      <div class="section">
-        <div class="section-title">
-          Claude AI <span class="badge required">Required</span>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Claude AI</span>
+          <span class="badge required">Required</span>
         </div>
-
-        <div class="form-group">
-          <label for="anthropicApiKey">Anthropic API Key</label>
-          <div class="description">
-            Your Anthropic API key for Claude AI. Get one at <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label" for="anthropicApiKey">API Key</label>
+            <div class="form-hint">
+              Get your API key from <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a>
+            </div>
+            <input
+              type="password"
+              id="anthropicApiKey"
+              name="anthropicApiKey"
+              class="form-input mono"
+              placeholder="sk-ant-..."
+              required
+              autocomplete="off"
+            >
           </div>
-          <input
-            type="password"
-            id="anthropicApiKey"
-            name="anthropicApiKey"
-            class="code-input"
-            placeholder="sk-ant-..."
-            required
-          />
         </div>
       </div>
 
-      <div class="section">
-        <div class="section-title">
-          Instapaper <span class="badge optional">Optional</span>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Instapaper</span>
+          <span class="badge optional">Optional</span>
         </div>
-        <div class="description" style="margin-bottom: 16px;">
-          Articles detected by AI will be automatically saved to Instapaper if credentials are provided.
-        </div>
-
-        <div class="form-group">
-          <label for="instapaperUsername">Username or Email</label>
-          <input
-            type="text"
-            id="instapaperUsername"
-            name="instapaperUsername"
-            placeholder="your@email.com"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="instapaperPassword">Password</label>
-          <div class="description">
-            Leave blank if you don't have a password set on Instapaper.
+        <div class="card-body">
+          <div class="form-hint" style="margin-bottom: 16px;">
+            Articles will be automatically saved to Instapaper for reading later.
           </div>
-          <input
-            type="password"
-            id="instapaperPassword"
-            name="instapaperPassword"
-            placeholder="Optional"
-          />
+          <div class="form-group">
+            <label class="form-label" for="instapaperUsername">Email</label>
+            <input
+              type="text"
+              id="instapaperUsername"
+              name="instapaperUsername"
+              class="form-input"
+              placeholder="you@example.com"
+              autocomplete="email"
+            >
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="instapaperPassword">Password</label>
+            <div class="form-hint">Leave blank if you haven't set a password.</div>
+            <input
+              type="password"
+              id="instapaperPassword"
+              name="instapaperPassword"
+              class="form-input"
+              placeholder="Optional"
+              autocomplete="current-password"
+            >
+          </div>
         </div>
       </div>
 
-      <div class="section">
-        <div class="section-title">
-          Todoist <span class="badge optional">Optional</span>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Todoist</span>
+          <span class="badge optional">Optional</span>
         </div>
-        <div class="description" style="margin-bottom: 16px;">
-          Create tasks in Todoist when bookmarking (enable per-bookmark in popup).
-        </div>
-
-        <div class="form-group">
-          <label for="todoistApiToken">API Token</label>
-          <div class="description">
-            Get your API token from <a href="https://todoist.com/app/settings/integrations/developer" target="_blank">Todoist Settings</a>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label" for="todoistApiToken">API Token</label>
+            <div class="form-hint">
+              Get your token from <a href="https://todoist.com/app/settings/integrations/developer" target="_blank">Todoist Settings</a>
+            </div>
+            <input
+              type="password"
+              id="todoistApiToken"
+              name="todoistApiToken"
+              class="form-input mono"
+              placeholder="Your Todoist API token"
+              autocomplete="off"
+            >
           </div>
-          <input
-            type="password"
-            id="todoistApiToken"
-            name="todoistApiToken"
-            class="code-input"
-            placeholder="Your Todoist API token"
-          />
         </div>
       </div>
 
-      <div class="buttons">
-        <button type="submit" class="btn-primary">Save Settings</button>
-        <button type="button" class="btn-secondary" id="resetBtn">Reset to Default</button>
+      <div class="actions">
+        <button type="submit" class="btn btn-primary">Save Settings</button>
+        <button type="button" class="btn btn-secondary" id="resetBtn">Reset</button>
       </div>
 
       <div class="status" id="status"></div>
     </form>
 
-    <div class="warning-box">
-      <strong>Security Note:</strong>
-      API keys are stored locally in your browser's extension storage and synced across your Chrome devices if sync is enabled.
-      Use dedicated API keys with limited scope where possible.
+    <div class="card warning-card" style="margin-top: 24px;">
+      <div class="warning-title">Security</div>
+      <p>API keys are stored in your browser's extension storage and synced across your Chrome devices. Use dedicated API keys with limited scope when possible.</p>
     </div>
 
-    <div class="info-box">
-      <strong>How it works:</strong>
-      1. When you bookmark a page, Claude AI analyzes the content<br>
-      2. Articles are automatically saved to Instapaper (if configured)<br>
-      3. Other content is organized into bookmark folders based on AI categorization<br>
-      4. Optionally create a Todoist task for follow-up<br>
-      <br>
-      <strong>No backend server required!</strong> All processing happens directly from the extension.
+    <div class="card info-card">
+      <div class="info-title">How it works</div>
+      <p>When you save a bookmark, Claude AI analyzes the page content and automatically organizes it into the appropriate folder based on your existing bookmark structure.</p>
+      <p>Articles are sent to Instapaper. Other content is saved to Chrome bookmarks.</p>
     </div>
   </div>
 

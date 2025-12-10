@@ -1,9 +1,7 @@
-// Get current tab URL on load
 let currentUrl = '';
 let currentTitle = '';
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Get current tab
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
   if (tab) {
@@ -12,14 +10,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('urlDisplay').textContent = currentUrl;
   }
 
-  // Check if Anthropic API key is configured
   const settings = await chrome.storage.sync.get({ anthropicApiKey: '' });
   if (!settings.anthropicApiKey || settings.anthropicApiKey.trim() === '') {
-    showStatus('⚠️ Anthropic API key not configured. Click "Extension Settings" below to configure.', 'warning');
+    showStatus('API key not configured. Open Settings to add your Anthropic API key.', 'warning');
     document.getElementById('analyzeBtn').disabled = true;
   }
 
-  // Set up event listeners
   document.getElementById('analyzeBtn').addEventListener('click', analyzeAndBookmark);
   document.getElementById('cancelBtn').addEventListener('click', () => window.close());
   document.getElementById('settingsLink').addEventListener('click', (e) => {
@@ -33,14 +29,10 @@ async function analyzeAndBookmark() {
   const autoBookmark = document.getElementById('autoBookmark').checked;
   const createTodoist = document.getElementById('createTodoist').checked;
 
-  // Disable button
   analyzeBtn.disabled = true;
-
-  // Show loading status
-  showStatus('Analyzing bookmark...', 'loading');
+  showStatus('Analyzing page...', 'loading');
 
   try {
-    // Send message to background script to analyze
     const response = await chrome.runtime.sendMessage({
       action: 'analyzeBookmark',
       url: currentUrl,
@@ -50,89 +42,76 @@ async function analyzeAndBookmark() {
     });
 
     if (response.success) {
-      showStatus('Analysis complete!', 'success');
       displayResults(response.data);
-
-      // If auto-bookmark is enabled, the background script already created the bookmark
       if (autoBookmark && response.data.bookmarkCreated) {
-        showStatus('Bookmarked successfully to: ' + response.data.matchedCategory, 'success');
+        showStatus('Saved to ' + response.data.matchedCategory, 'success');
+      } else if (response.data.isArticle && response.data.instapaper?.saved) {
+        showStatus('Article saved to Instapaper', 'success');
+      } else {
+        showStatus('Analysis complete', 'success');
       }
     } else {
-      showStatus('Error: ' + response.error, 'error');
+      showStatus(response.error, 'error');
     }
   } catch (error) {
-    showStatus('Error: ' + error.message, 'error');
+    showStatus(error.message, 'error');
   } finally {
     analyzeBtn.disabled = false;
   }
 }
 
 function showStatus(message, type) {
-  const statusContainer = document.getElementById('statusContainer');
-  // Replace newlines with <br> for better formatting
-  const formattedMessage = message.replace(/\n/g, '<br>');
-  statusContainer.innerHTML = `<div class="status ${type}">${formattedMessage}</div>`;
+  const container = document.getElementById('statusContainer');
+  const icons = {
+    loading: '<svg class="status-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8z"/></svg>',
+    success: '<svg class="status-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>',
+    error: '<svg class="status-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>',
+    warning: '<svg class="status-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>'
+  };
+  container.innerHTML = `<div class="status ${type}">${icons[type] || ''}<span>${message}</span></div>`;
 }
 
 function displayResults(data) {
   const resultsDiv = document.getElementById('results');
   resultsDiv.classList.add('visible');
 
-  // Display matched category
-  if (data.matchedCategory) {
+  if (data.matchedCategory && !data.isArticle) {
     document.getElementById('matchedCategory').textContent = data.matchedCategory;
     document.getElementById('matchedCategoryContainer').style.display = 'block';
   } else {
     document.getElementById('matchedCategoryContainer').style.display = 'none';
   }
 
-  // Display title
   document.getElementById('resultTitle').textContent = data.title || 'N/A';
-
-  // Display summary
   document.getElementById('resultSummary').textContent = data.summary || 'N/A';
+  document.getElementById('contentType').textContent = data.isArticle ? 'Article' : (data.contentType || 'N/A');
 
-  // Display content type
-  document.getElementById('contentType').textContent =
-    data.isArticle ? 'Article' : (data.contentType || 'N/A');
-
-  // Display categories
   if (data.categories && data.categories.length > 0) {
-    const categoriesDiv = document.getElementById('categories');
-    categoriesDiv.innerHTML = data.categories
-      .map(cat => `<span class="category-tag">${cat}</span>`)
+    document.getElementById('categories').innerHTML = data.categories
+      .map(cat => `<span class="tag">${cat}</span>`)
       .join('');
     document.getElementById('categoriesContainer').style.display = 'block';
   } else {
     document.getElementById('categoriesContainer').style.display = 'none';
   }
 
-  // Display Instapaper status
   if (data.instapaper) {
-    const instapaperContainer = document.getElementById('instapaperContainer');
-    const instapaperStatus = document.getElementById('instapaperStatus');
-
+    const el = document.getElementById('instapaperStatus');
     if (data.instapaper.saved) {
-      instapaperStatus.innerHTML = '<a href="https://www.instapaper.com/u" target="_blank" style="color: #2e7d32; text-decoration: underline;">Saved</a>';
+      el.innerHTML = '<span class="dot success"></span><a href="https://www.instapaper.com/u" target="_blank" style="color: inherit;">Saved</a>';
     } else {
-      instapaperStatus.textContent = 'Not saved';
-      instapaperStatus.style.color = '#666';
+      el.innerHTML = '<span class="dot error"></span>Not saved';
     }
-    instapaperContainer.style.display = 'block';
+    document.getElementById('instapaperContainer').style.display = 'block';
   }
 
-  // Display Todoist status
   if (data.todoist) {
-    const todoistContainer = document.getElementById('todoistContainer');
-    const todoistStatus = document.getElementById('todoistStatus');
-
+    const el = document.getElementById('todoistStatus');
     if (data.todoist.created) {
-      todoistStatus.textContent = `Task created (ID: ${data.todoist.taskId})`;
-      todoistStatus.style.color = '#2e7d32';
+      el.innerHTML = '<span class="dot success"></span>Task created';
     } else {
-      todoistStatus.textContent = 'Task not created';
-      todoistStatus.style.color = '#666';
+      el.innerHTML = '<span class="dot error"></span>Not created';
     }
-    todoistContainer.style.display = 'block';
+    document.getElementById('todoistContainer').style.display = 'block';
   }
 }
