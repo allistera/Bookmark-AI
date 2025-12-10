@@ -19,8 +19,8 @@ async function fetchHtmlContent(url) {
     console.log(`Fetching HTML content for: ${url}`);
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; Bookmark-AI/1.0)',
-      },
+        'User-Agent': 'Mozilla/5.0 (compatible; Bookmark-AI/1.0)'
+      }
     });
 
     if (!response.ok) {
@@ -153,7 +153,7 @@ async function saveToInstapaper(url, title, username, password) {
   // Prepare the request body
   const params = new URLSearchParams({
     url: url,
-    title: title,
+    title: title
   });
 
   // Use HTTP Basic Authentication
@@ -165,9 +165,9 @@ async function saveToInstapaper(url, title, username, password) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${auth}`,
+        'Authorization': `Basic ${auth}`
       },
-      body: params.toString(),
+      body: params.toString()
     });
 
     if (response.status === 201) {
@@ -190,7 +190,7 @@ async function saveToInstapaper(url, title, username, password) {
     console.error('Error saving to Instapaper:', error);
     return {
       success: false,
-      error: error.message || 'Unknown error',
+      error: error.message || 'Unknown error'
     };
   }
 }
@@ -210,11 +210,11 @@ async function createTodoistTask(url, title, summary, apiToken) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiToken}`,
+        'Authorization': `Bearer ${apiToken}`
       },
       body: JSON.stringify({
-        content: taskContent,
-      }),
+        content: taskContent
+      })
     });
 
     if (response.status === 200) {
@@ -233,7 +233,7 @@ async function createTodoistTask(url, title, summary, apiToken) {
     console.error('Error creating Todoist task:', error);
     return {
       success: false,
-      error: error.message || 'Unknown error',
+      error: error.message || 'Unknown error'
     };
   }
 }
@@ -393,32 +393,6 @@ async function getOrCreateFolder(title, parentId) {
   }
 }
 
-/**
- * Helper function to find a bookmark tree node by path
- * @param {string[]} pathSegments - Array of folder names
- * @param {string} startNodeId - The starting node ID (default: '1' for bookmarks bar)
- * @returns {Promise<chrome.bookmarks.BookmarkTreeNode|null>}
- */
-async function findNodeByPath(pathSegments, startNodeId = '1') {
-  let currentNodeId = startNodeId;
-
-  for (const segment of pathSegments) {
-    const children = await chrome.bookmarks.getChildren(currentNodeId);
-    const matchingChild = children.find(
-      child => !child.url && child.title === segment
-    );
-
-    if (!matchingChild) {
-      return null;
-    }
-
-    currentNodeId = matchingChild.id;
-  }
-
-  const nodes = await chrome.bookmarks.get(currentNodeId);
-  return nodes[0] || null;
-}
-
 // Add context menu item for right-click bookmarking
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
@@ -429,7 +403,7 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 // Handle context menu clicks
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+chrome.contextMenus.onClicked.addListener(async (info, _tab) => {
   if (info.menuItemId === 'bookmark-ai') {
     // Open the popup or trigger analysis
     chrome.action.openPopup();

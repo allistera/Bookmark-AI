@@ -1,0 +1,21 @@
+{
+  "name": "bookmark-ai",
+  "version": "2.0.0",
+  "description": "AI-powered bookmark organizer Chrome extension",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "build": "zip -r bookmark-ai.zip manifest.json background.js categories.js popup.html popup.js options.html options.js icons/ README.md -x '*.DS_Store'"
+  },
+  "devDependencies": {
+    "eslint": "^9.15.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/allistera/Bookmark-AI.git"
+  },
+  "author": "Allister Antosik",
+  "license": "MIT"
+}
