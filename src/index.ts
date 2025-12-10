@@ -37,6 +37,12 @@ function extractCategories(obj: BookmarkCategory, prefix: string = ''): string[]
   const categories: string[] = [];
 
   for (const key in obj) {
+    // Skip the root key and process its children directly
+    if (key === 'Allister_Bookmarks') {
+      categories.push(...extractCategories(obj[key] as BookmarkCategory, ''));
+      continue;
+    }
+
     const formattedKey = formatKey(key);
     const currentPath = prefix ? `${prefix}/${formattedKey}` : formattedKey;
 
