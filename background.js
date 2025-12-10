@@ -1,6 +1,3 @@
-// Import categories
-importScripts('categories.js');
-
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'analyzeBookmark') {
@@ -10,6 +7,47 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // Keep channel open for async response
   }
 });
+
+/**
+ * Scans the user's bookmark tree and extracts all folder paths
+ * @returns {Promise<string[]>} Array of folder paths (e.g., "Work/Projects/Web")
+ */
+async function getExistingBookmarkFolders() {
+  const tree = await chrome.bookmarks.getTree();
+  const folders = [];
+
+  function extractFolders(nodes, path = '') {
+    for (const node of nodes) {
+      // Skip if it's a bookmark (has url) - we only want folders
+      if (node.url) continue;
+
+      // Skip root nodes (Bookmarks Bar, Other Bookmarks, Mobile Bookmarks)
+      // but process their children
+      if (node.parentId === '0') {
+        if (node.children) {
+          extractFolders(node.children, '');
+        }
+        continue;
+      }
+
+      // Build the current path
+      const currentPath = path ? `${path}/${node.title}` : node.title;
+
+      // Add this folder to the list
+      if (node.title) {
+        folders.push(currentPath);
+      }
+
+      // Recursively process children
+      if (node.children) {
+        extractFolders(node.children, currentPath);
+      }
+    }
+  }
+
+  extractFolders(tree);
+  return folders;
+}
 
 /**
  * Fetches the HTML content of a URL for analysis
@@ -49,8 +87,22 @@ async function analyzeBookmark(url, apiKey, providedTitle) {
     }
   }
 
-  // Get available categories
-  const availableCategories = window.BookmarkCategories.getAvailableCategories();
+  // Get the user's existing bookmark folders
+  const existingFolders = await getExistingBookmarkFolders();
+  console.log('Found existing bookmark folders:', existingFolders.length);
+
+  // Build the category matching section of the prompt
+  let categorySection = '';
+  if (existingFolders.length > 0) {
+    categorySection = `
+Additionally, if this is NOT an article, you MUST match it to exactly ONE category - the single best match from the user's existing bookmark folders:
+${existingFolders.join('\n')}
+
+IMPORTANT: Return ONLY ONE category path that best matches the URL content. Use the EXACT path from the list above. If none of the existing folders are appropriate, you may suggest a new folder name.`;
+  } else {
+    categorySection = `
+Additionally, if this is NOT an article, suggest a category path for organizing this bookmark (e.g., "Work/Development/Tools" or "Personal/Finance").`;
+  }
 
   const prompt = `Analyze this bookmark and provide:
 1. Whether this is a web article/blog post (true) or something else like a tool, homepage, documentation, etc. (false)
@@ -62,12 +114,7 @@ async function analyzeBookmark(url, apiKey, providedTitle) {
 URL: ${url}
 ${htmlContent ? `\nHTML Content (first 8000 chars):\n${htmlContent}` : ''}
 
-${!url.includes('article') && !url.includes('blog') && !url.includes('post') ? `
-Additionally, if this is NOT an article, you MUST match it to exactly ONE category - the single best match from this list:
-${availableCategories.join('\n')}
-
-IMPORTANT: Return ONLY ONE category path that best matches the URL content. If none of the categories are appropriate, return "Other".
-` : ''}
+${!url.includes('article') && !url.includes('blog') && !url.includes('post') ? categorySection : ''}
 
 Please respond in JSON format:
 {
@@ -76,7 +123,7 @@ Please respond in JSON format:
   "title": "Title here",
   "summary": "Summary here",
   "categories": ["category1", "category2", "category3"],
-  "matchedCategory": "Single/Best/Category/Path" or "Other" (REQUIRED if not an article - return only ONE category)
+  "matchedCategory": "Single/Best/Category/Path" (REQUIRED if not an article - return only ONE category)
 }`;
 
   let response;
@@ -327,7 +374,7 @@ async function handleAnalyzeBookmark({ url, title, createTodoist, autoBookmark }
  * Creates a bookmark in the specified category path
  * @param {string} url - The URL to bookmark
  * @param {string} title - The bookmark title
- * @param {string} categoryPath - The category path (e.g., "Work and Engineering/Software Development")
+ * @param {string} categoryPath - The category path (e.g., "Work/Projects/Web")
  * @returns {Promise<string>} The created bookmark ID
  */
 async function createBookmarkInCategory(url, title, categoryPath) {

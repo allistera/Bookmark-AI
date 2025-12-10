@@ -29,7 +29,6 @@ jobs:
           zip -r bookmark-ai-${{ steps.version.outputs.version }}.zip \
             manifest.json \
             background.js \
-            categories.js \
             popup.html \
             popup.js \
             options.html \
