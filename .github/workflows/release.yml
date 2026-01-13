@@ -93,16 +93,16 @@ jobs:
             echo "Generating release notes from $PREVIOUS_TAG to HEAD"
 
             # Generate commit log
-            COMMITS=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+            COMMITS=$(git log "${PREVIOUS_TAG}"..HEAD --pretty=format:"- %s (%h)" --no-merges)
 
             if [ -z "$COMMITS" ]; then
               RELEASE_NOTES="Release v${VERSION}"
             else
               RELEASE_NOTES="## What's Changed
-
               ${COMMITS}
 
               **Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...v${VERSION}"
+
             fi
           fi
 
