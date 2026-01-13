@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="icons/icon128.png" alt="Bookmark AI Icon" width="128" height="128">
+</div>
+
 # Bookmark AI Chrome Extension
 
 A Chrome extension that uses AI to automatically categorize and organize your bookmarks into a hierarchical folder structure.

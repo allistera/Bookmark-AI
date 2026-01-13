@@ -1,3 +1,61 @@
-<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-  <image href="image.png" width="128" height="128"/>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Folder shadow -->
+  <g opacity="0.2">
+    <path d="M180 320 C180 280 210 250 250 250 L450 250 L520 320 L820 320 C860 320 890 350 890 390 L890 770 C890 810 860 840 820 840 L250 840 C210 840 180 810 180 770 Z" fill="#000000"/>
+  </g>
+
+  <!-- Folder back part (darker) -->
+  <path d="M160 300 C160 260 190 230 230 230 L430 230 L500 300 L800 300 C840 300 870 330 870 370 L870 750 C870 790 840 820 800 820 L230 820 C190 820 160 790 160 750 Z" fill="#D68A00" stroke="#B87000" stroke-width="8"/>
+
+  <!-- Folder front part (lighter) -->
+  <path d="M160 330 L160 750 C160 790 190 820 230 820 L800 820 C840 820 870 790 870 750 L870 370 C870 330 840 300 800 300 L500 300 L430 230 L230 230 C190 230 160 260 160 300 L160 330 Z" fill="#FDB91F"/>
+
+  <!-- Folder highlight -->
+  <path d="M160 330 L160 400 C160 400 200 380 300 370 C400 360 700 360 870 380 L870 370 C870 330 840 300 800 300 L500 300 L430 230 L230 230 C190 230 160 260 160 300 Z" fill="#FFD54F" opacity="0.8"/>
+
+  <!-- Folder tab -->
+  <path d="M230 230 L430 230 L500 300 L300 300 Z" fill="#FDB91F" stroke="#D68A00" stroke-width="8" stroke-linejoin="round"/>
+
+  <!-- Folder inner shadow -->
+  <ellipse cx="515" cy="550" rx="280" ry="200" fill="#000000" opacity="0.08"/>
+
+  <!-- AI Badge - outer circle (dark blue border) -->
+  <circle cx="640" cy="580" r="185" fill="#003D82" stroke="#002556" stroke-width="12"/>
+
+  <!-- AI Badge - main circle (blue gradient) -->
+  <defs>
+    <radialGradient id="badgeGradient" cx="0.4" cy="0.3">
+      <stop offset="0%" style="stop-color:#4A9EFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0066CC;stop-opacity:1" />
+    </radialGradient>
+  </defs>
+  <circle cx="640" cy="580" r="170" fill="url(#badgeGradient)"/>
+
+  <!-- AI Badge - highlight -->
+  <ellipse cx="600" cy="520" rx="70" ry="50" fill="#FFFFFF" opacity="0.3"/>
+
+  <!-- AI Text -->
+  <text x="640" y="640" font-family="Arial, sans-serif" font-size="180" font-weight="bold" fill="#FFFFFF" text-anchor="middle">AI</text>
+
+  <!-- Sparkle 1 (large, top right) -->
+  <g transform="translate(800, 300)">
+    <path d="M 0,-40 L 5,-10 L 35,-5 L 5,0 L 0,30 L -5,0 L -35,-5 L -5,-10 Z" fill="#4A9EFF"/>
+    <path d="M 0,-30 L 3,-10 L 23,-7 L 3,-4 L 0,16 L -3,-4 L -23,-7 L -3,-10 Z" fill="#B3D9FF"/>
+  </g>
+
+  <!-- Sparkle 2 (medium, right) -->
+  <g transform="translate(880, 420)">
+    <path d="M 0,-25 L 3,-8 L 20,-5 L 3,-2 L 0,15 L -3,-2 L -20,-5 L -3,-8 Z" fill="#4A9EFF"/>
+    <path d="M 0,-18 L 2,-8 L 12,-6 L 2,-4 L 0,6 L -2,-4 L -12,-6 L -2,-8 Z" fill="#B3D9FF"/>
+  </g>
+
+  <!-- Sparkle 3 (small, far right) -->
+  <g transform="translate(900, 520)">
+    <path d="M 0,-15 L 2,-5 L 12,-3 L 2,-1 L 0,9 L -2,-1 L -12,-3 L -2,-5 Z" fill="#4A9EFF"/>
+  </g>
+
+  <!-- Sparkle 4 (tiny, top) -->
+  <g transform="translate(750, 260)">
+    <path d="M 0,-10 L 1.5,-3 L 8,-2 L 1.5,-1 L 0,6 L -1.5,-1 L -8,-2 L -1.5,-3 Z" fill="#B3D9FF"/>
+  </g>
 </svg>
