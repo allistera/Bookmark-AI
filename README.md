@@ -4,6 +4,10 @@
 
 # Bookmark AI Chrome Extension
 
+[![Latest Release](https://img.shields.io/github/v/release/allistera/Bookmark-AI)](https://github.com/allistera/Bookmark-AI/releases/latest)
+[![Build Extension](https://github.com/allistera/Bookmark-AI/actions/workflows/build.yml/badge.svg)](https://github.com/allistera/Bookmark-AI/actions/workflows/build.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A Chrome extension that uses AI to automatically categorize and organize your bookmarks into a hierarchical folder structure.
 
 ## Features
