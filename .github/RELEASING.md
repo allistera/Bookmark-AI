@@ -46,9 +46,9 @@ You can manually trigger a release from the GitHub Actions tab:
 3. Optionally specify a version (or leave empty to use `manifest.json` version)
 4. Click **Run workflow**
 
-### Method 3: Manual Tag (Legacy)
+### Method 3: Alternative Method – Manual Tag
 
-The old `build.yml` workflow still supports manual tag creation:
+The existing `build.yml` workflow also supports creating releases from manually pushed tags:
 
 ```bash
 git tag v2.1.0
