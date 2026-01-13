@@ -100,9 +100,9 @@ jobs:
             else
               RELEASE_NOTES="## What's Changed
 
-          ${COMMITS}
+              ${COMMITS}
 
-          **Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...v${VERSION}"
+              **Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...v${VERSION}"
             fi
           fi
 
