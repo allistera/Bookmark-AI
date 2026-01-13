@@ -1,0 +1,130 @@
+name: Create Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'manifest.json'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (leave empty to use manifest.json version)'
+        required: false
+        type: string
+
+jobs:
+  check-version:
+    name: Check Version Change
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.version_check.outputs.should_release }}
+      version: ${{ steps.version_check.outputs.version }}
+      tag_exists: ${{ steps.version_check.outputs.tag_exists }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get current version
+        id: current_version
+        run: |
+          VERSION=$(jq -r '.version' manifest.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+
+      - name: Check if tag exists
+        id: version_check
+        run: |
+          VERSION="${{ github.event.inputs.version || steps.current_version.outputs.version }}"
+          TAG="v$VERSION"
+
+          # Check if tag already exists
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists"
+            echo "tag_exists=true" >> $GITHUB_OUTPUT
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          else
+            echo "Tag $TAG does not exist - will create release"
+            echo "tag_exists=false" >> $GITHUB_OUTPUT
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+  build-and-release:
+    name: Build and Create Release
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create extension package
+        run: |
+          VERSION="${{ needs.check-version.outputs.version }}"
+          zip -r bookmark-ai-v${VERSION}.zip \
+            manifest.json \
+            background.js \
+            popup.html \
+            popup.js \
+            options.html \
+            options.js \
+            icons/ \
+            README.md \
+            -x '*.DS_Store'
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          VERSION="${{ needs.check-version.outputs.version }}"
+
+          # Get the previous tag
+          PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -E '^v[0-9]' | head -n 1)
+
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "No previous release found"
+            RELEASE_NOTES="Initial release v${VERSION}"
+          else
+            echo "Generating release notes from $PREVIOUS_TAG to HEAD"
+
+            # Generate commit log
+            COMMITS=$(git log "${PREVIOUS_TAG}"..HEAD --pretty=format:"- %s (%h)" --no-merges)
+
+            if [ -z "$COMMITS" ]; then
+              RELEASE_NOTES="Release v${VERSION}"
+            else
+              RELEASE_NOTES="## What's Changed
+
+${COMMITS}
+
+**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...v${VERSION}"
+            fi
+          fi
+
+          # Save to file for multiline output
+          echo "$RELEASE_NOTES" > release_notes.md
+          echo "Release notes generated"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.check-version.outputs.version }}
+          name: Release v${{ needs.check-version.outputs.version }}
+          body_path: release_notes.md
+          files: bookmark-ai-v${{ needs.check-version.outputs.version }}.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bookmark-ai-v${{ needs.check-version.outputs.version }}
+          path: bookmark-ai-v${{ needs.check-version.outputs.version }}.zip
+          retention-days: 90
