@@ -93,7 +93,7 @@ jobs:
             echo "Generating release notes from $PREVIOUS_TAG to HEAD"
 
             # Generate commit log
-            COMMITS=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+            COMMITS=$(git log "${PREVIOUS_TAG}"..HEAD --pretty=format:"- %s (%h)" --no-merges)
 
             if [ -z "$COMMITS" ]; then
               RELEASE_NOTES="Release v${VERSION}"
