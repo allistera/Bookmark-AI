@@ -74,9 +74,9 @@ async function fetchHtmlContent(url) {
 }
 
 /**
- * Analyzes a bookmark URL using Claude AI directly
+ * Analyzes a bookmark URL using the configured AI provider
  */
-async function analyzeBookmark(url, apiKey, providedTitle) {
+async function analyzeBookmark(url, settings, provider, providedTitle) {
   // Fetch HTML content if no title was provided
   let htmlContent = null;
   if (!providedTitle) {
@@ -126,61 +126,95 @@ Please respond in JSON format:
   "matchedCategory": "Single/Best/Category/Path" (REQUIRED if not an article - return only ONE category)
 }`;
 
-  let response;
-  try {
-    response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-haiku-20241022',
-        max_tokens: 1024,
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ]
-      })
-    });
-  } catch (error) {
-    console.error('Error calling Anthropic API:', error);
-    throw new Error(`Failed to call Claude AI: ${error.message}`);
+  let responseText;
+
+  if (provider === 'openrouter') {
+    // OpenRouter API call (OpenAI-compatible format)
+    let response;
+    try {
+      response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${settings.openrouterApiKey}`,
+          'HTTP-Referer': 'https://github.com/bookmark-ai',
+          'X-Title': 'Bookmark AI'
+        },
+        body: JSON.stringify({
+          model: settings.openrouterModel,
+          max_tokens: 1024,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+    } catch (error) {
+      console.error('Error calling OpenRouter API:', error);
+      throw new Error(`Failed to call OpenRouter API: ${error.message}`);
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('OpenRouter API error:', response.status, errorText);
+      throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+    }
+
+    const message = await response.json();
+    responseText = message.choices?.[0]?.message?.content;
+    if (!responseText) {
+      console.error('No content in OpenRouter response:', JSON.stringify(message));
+      throw new Error('No content in OpenRouter response');
+    }
+  } else {
+    // Anthropic API call
+    let response;
+    try {
+      response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': settings.anthropicApiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-haiku-20241022',
+          max_tokens: 1024,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+    } catch (error) {
+      console.error('Error calling Anthropic API:', error);
+      throw new Error(`Failed to call Claude AI: ${error.message}`);
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Anthropic API error:', response.status, errorText);
+      throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
+    }
+
+    const message = await response.json();
+    const textContent = message.content.find(block => block.type === 'text');
+    if (!textContent) {
+      console.error('No text content in Claude response. Response:', JSON.stringify(message.content));
+      throw new Error('No text content in Claude response');
+    }
+    responseText = textContent.text;
   }
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('Anthropic API error:', response.status, errorText);
-    throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
-  }
-
-  const message = await response.json();
-
-  // Extract the text content from the response
-  const textContent = message.content.find(block => block.type === 'text');
-  if (!textContent || textContent.type !== 'text') {
-    console.error('No text content in Claude response. Response:', JSON.stringify(message.content));
-    throw new Error('No text content in Claude response');
-  }
-
-  // Parse the JSON response
-  const jsonMatch = textContent.text.match(/\{[\s\S]*\}/);
+  // Parse the JSON response (same for both providers)
+  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    console.error('Could not find JSON in Claude response. Response text:', textContent.text);
-    throw new Error('Could not find JSON in Claude response');
+    console.error('Could not find JSON in AI response. Response text:', responseText);
+    throw new Error('Could not find JSON in AI response');
   }
 
   let result;
   try {
     result = JSON.parse(jsonMatch[0]);
   } catch (error) {
-    console.error('Error parsing JSON from Claude response:', error);
+    console.error('Error parsing JSON from AI response:', error);
     console.error('JSON string:', jsonMatch[0]);
-    throw new Error(`Failed to parse Claude response: ${error.message}`);
+    throw new Error(`Failed to parse AI response: ${error.message}`);
   }
 
   // If not an article and no matched category, set to "Other"
@@ -289,19 +323,33 @@ async function handleAnalyzeBookmark({ url, title, createTodoist, autoBookmark }
   try {
     // Get settings from storage
     const settings = await chrome.storage.sync.get({
+      aiProvider: 'anthropic',
       anthropicApiKey: '',
+      openrouterApiKey: '',
+      openrouterModel: '',
       instapaperUsername: '',
       instapaperPassword: '',
       todoistApiToken: ''
     });
 
-    // Validate Anthropic API key is configured
-    if (!settings.anthropicApiKey || settings.anthropicApiKey.trim() === '') {
-      throw new Error('Anthropic API key not configured. Please configure it in Extension Settings.');
+    const provider = settings.aiProvider || 'anthropic';
+
+    // Validate AI provider credentials are configured
+    if (provider === 'openrouter') {
+      if (!settings.openrouterApiKey || settings.openrouterApiKey.trim() === '') {
+        throw new Error('OpenRouter API key not configured. Please configure it in Extension Settings.');
+      }
+      if (!settings.openrouterModel || settings.openrouterModel.trim() === '') {
+        throw new Error('OpenRouter model not selected. Please select a model in Extension Settings.');
+      }
+    } else {
+      if (!settings.anthropicApiKey || settings.anthropicApiKey.trim() === '') {
+        throw new Error('Anthropic API key not configured. Please configure it in Extension Settings.');
+      }
     }
 
-    // Analyze the bookmark using Claude AI
-    const analysis = await analyzeBookmark(url, settings.anthropicApiKey, title);
+    // Analyze the bookmark using the configured AI provider
+    const analysis = await analyzeBookmark(url, settings, provider, title);
 
     // Automatically save to Instapaper if this is an article and credentials are configured
     let instapaperResult = null;
