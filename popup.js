@@ -10,9 +10,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('urlDisplay').textContent = currentUrl;
   }
 
-  const settings = await chrome.storage.sync.get({ anthropicApiKey: '' });
-  if (!settings.anthropicApiKey || settings.anthropicApiKey.trim() === '') {
-    showStatus('API key not configured. Open Settings to add your Anthropic API key.', 'warning');
+  const settings = await chrome.storage.sync.get({
+    aiProvider: 'anthropic',
+    anthropicApiKey: '',
+    openrouterApiKey: '',
+    openrouterModel: ''
+  });
+  const provider = settings.aiProvider || 'anthropic';
+  let configWarning = null;
+  if (provider === 'anthropic' && (!settings.anthropicApiKey || settings.anthropicApiKey.trim() === '')) {
+    configWarning = 'API key not configured. Open Settings to add your Anthropic API key.';
+  } else if (provider === 'openrouter' && (!settings.openrouterApiKey || settings.openrouterApiKey.trim() === '')) {
+    configWarning = 'OpenRouter API key not configured. Open Settings to add it.';
+  } else if (provider === 'openrouter' && (!settings.openrouterModel || settings.openrouterModel.trim() === '')) {
+    configWarning = 'No OpenRouter model selected. Open Settings to choose one.';
+  }
+  if (configWarning) {
+    showStatus(configWarning, 'warning');
     document.getElementById('analyzeBtn').disabled = true;
   }
 
