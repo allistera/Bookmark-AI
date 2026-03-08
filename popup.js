@@ -83,10 +83,12 @@ function showStatus(message, type) {
     warning: '<svg class="status-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>'
   };
 
-  container.innerHTML = '';
+  container.textContent = '';
   const statusDiv = document.createElement('div');
   statusDiv.className = `status ${type}`;
-  statusDiv.innerHTML = icons[type] || '';
+  if (icons[type]) {
+    statusDiv.insertAdjacentHTML('beforeend', icons[type]);
+  }
 
   const span = document.createElement('span');
   span.textContent = message;
@@ -112,7 +114,7 @@ function displayResults(data) {
 
   if (data.categories && data.categories.length > 0) {
     const categoriesContainer = document.getElementById('categories');
-    categoriesContainer.innerHTML = '';
+    categoriesContainer.textContent = '';
     data.categories.forEach(cat => {
       const span = document.createElement('span');
       span.className = 'tag';
@@ -126,7 +128,7 @@ function displayResults(data) {
 
   if (data.instapaper) {
     const el = document.getElementById('instapaperStatus');
-    el.innerHTML = '';
+    el.textContent = '';
     const dot = document.createElement('span');
     dot.className = `dot ${data.instapaper.saved ? 'success' : 'error'}`;
     el.appendChild(dot);
@@ -146,7 +148,7 @@ function displayResults(data) {
 
   if (data.todoist) {
     const el = document.getElementById('todoistStatus');
-    el.innerHTML = '';
+    el.textContent = '';
     const dot = document.createElement('span');
     dot.className = `dot ${data.todoist.created ? 'success' : 'error'}`;
     el.appendChild(dot);
