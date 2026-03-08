@@ -91,7 +91,7 @@ async function loadOpenRouterModels(preselectedModel = null) {
     models.sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
 
     const currentValue = preselectedModel || select.value;
-    select.innerHTML = '';
+    select.textContent = '';
     const defaultOption = document.createElement('option');
     defaultOption.value = '';
     defaultOption.textContent = 'Select a model...';
