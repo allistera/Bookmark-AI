@@ -1,3 +1,5 @@
+const USER_AGENT = 'Mozilla/5.0 (compatible; Bookmark-AI/1.0)';
+
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'analyzeBookmark') {
@@ -57,7 +59,7 @@ async function fetchHtmlContent(url) {
     console.log(`Fetching HTML content for: ${url}`);
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; Bookmark-AI/1.0)'
+        'User-Agent': USER_AGENT
       }
     });
 
