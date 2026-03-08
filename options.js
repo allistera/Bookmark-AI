@@ -92,10 +92,13 @@ async function loadOpenRouterModels(preselectedModel = null) {
 
     const currentValue = preselectedModel || select.value;
     select.innerHTML = '';
+
+    const fragment = document.createDocumentFragment();
+
     const defaultOption = document.createElement('option');
     defaultOption.value = '';
     defaultOption.textContent = 'Select a model...';
-    select.appendChild(defaultOption);
+    fragment.appendChild(defaultOption);
 
     for (const model of models) {
       const option = document.createElement('option');
@@ -104,8 +107,10 @@ async function loadOpenRouterModels(preselectedModel = null) {
       if (currentValue && model.id === currentValue) {
         option.selected = true;
       }
-      select.appendChild(option);
+      fragment.appendChild(option);
     }
+
+    select.appendChild(fragment);
 
     showStatus(`Loaded ${models.length} models`, 'success');
     setTimeout(hideStatus, 3000);
