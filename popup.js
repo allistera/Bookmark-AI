@@ -82,7 +82,17 @@ function showStatus(message, type) {
     error: '<svg class="status-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>',
     warning: '<svg class="status-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>'
   };
-  container.innerHTML = `<div class="status ${type}">${icons[type] || ''}<span>${message}</span></div>`;
+
+  container.innerHTML = '';
+  const statusDiv = document.createElement('div');
+  statusDiv.className = `status ${type}`;
+  statusDiv.innerHTML = icons[type] || '';
+
+  const span = document.createElement('span');
+  span.textContent = message;
+  statusDiv.appendChild(span);
+
+  container.appendChild(statusDiv);
 }
 
 function displayResults(data) {
@@ -101,9 +111,14 @@ function displayResults(data) {
   document.getElementById('contentType').textContent = data.isArticle ? 'Article' : (data.contentType || 'N/A');
 
   if (data.categories && data.categories.length > 0) {
-    document.getElementById('categories').innerHTML = data.categories
-      .map(cat => `<span class="tag">${cat}</span>`)
-      .join('');
+    const categoriesContainer = document.getElementById('categories');
+    categoriesContainer.innerHTML = '';
+    data.categories.forEach(cat => {
+      const span = document.createElement('span');
+      span.className = 'tag';
+      span.textContent = cat;
+      categoriesContainer.appendChild(span);
+    });
     document.getElementById('categoriesContainer').style.display = 'block';
   } else {
     document.getElementById('categoriesContainer').style.display = 'none';
@@ -111,21 +126,34 @@ function displayResults(data) {
 
   if (data.instapaper) {
     const el = document.getElementById('instapaperStatus');
+    el.innerHTML = '';
+    const dot = document.createElement('span');
+    dot.className = `dot ${data.instapaper.saved ? 'success' : 'error'}`;
+    el.appendChild(dot);
+
     if (data.instapaper.saved) {
-      el.innerHTML = '<span class="dot success"></span><a href="https://www.instapaper.com/u" target="_blank" style="color: inherit;">Saved</a>';
+      const link = document.createElement('a');
+      link.href = 'https://www.instapaper.com/u';
+      link.target = '_blank';
+      link.style.color = 'inherit';
+      link.textContent = 'Saved';
+      el.appendChild(link);
     } else {
-      el.innerHTML = '<span class="dot error"></span>Not saved';
+      el.appendChild(document.createTextNode('Not saved'));
     }
     document.getElementById('instapaperContainer').style.display = 'block';
   }
 
   if (data.todoist) {
     const el = document.getElementById('todoistStatus');
-    if (data.todoist.created) {
-      el.innerHTML = '<span class="dot success"></span>Task created';
-    } else {
-      el.innerHTML = '<span class="dot error"></span>Not created';
-    }
+    el.innerHTML = '';
+    const dot = document.createElement('span');
+    dot.className = `dot ${data.todoist.created ? 'success' : 'error'}`;
+    el.appendChild(dot);
+
+    const text = document.createTextNode(data.todoist.created ? 'Task created' : 'Not created');
+    el.appendChild(text);
+
     document.getElementById('todoistContainer').style.display = 'block';
   }
 }
