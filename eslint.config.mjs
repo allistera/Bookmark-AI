@@ -15,7 +15,8 @@ export default [
         URLSearchParams: 'readonly',
         btoa: 'readonly',
         setTimeout: 'readonly',
-        importScripts: 'readonly'
+        importScripts: 'readonly',
+        DOMParser: 'readonly'
       }
     },
     rules: {

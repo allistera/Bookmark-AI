@@ -77,16 +77,21 @@ async function analyzeAndBookmark() {
 function showStatus(message, type) {
   const container = document.getElementById('statusContainer');
   const icons = {
-    loading: '<svg class="status-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8z"/></svg>',
-    success: '<svg class="status-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>',
-    error: '<svg class="status-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>',
-    warning: '<svg class="status-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>'
+    loading: '<svg xmlns="http://www.w3.org/2000/svg" class="status-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8z"/></svg>',
+    success: '<svg xmlns="http://www.w3.org/2000/svg" class="status-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>',
+    error: '<svg xmlns="http://www.w3.org/2000/svg" class="status-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>',
+    warning: '<svg xmlns="http://www.w3.org/2000/svg" class="status-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>'
   };
 
-  container.innerHTML = '';
+  container.textContent = '';
   const statusDiv = document.createElement('div');
   statusDiv.className = `status ${type}`;
-  statusDiv.innerHTML = icons[type] || '';
+
+  if (icons[type]) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(icons[type], 'image/svg+xml');
+    statusDiv.appendChild(doc.documentElement);
+  }
 
   const span = document.createElement('span');
   span.textContent = message;
@@ -112,7 +117,7 @@ function displayResults(data) {
 
   if (data.categories && data.categories.length > 0) {
     const categoriesContainer = document.getElementById('categories');
-    categoriesContainer.innerHTML = '';
+    categoriesContainer.textContent = '';
     data.categories.forEach(cat => {
       const span = document.createElement('span');
       span.className = 'tag';
@@ -126,7 +131,7 @@ function displayResults(data) {
 
   if (data.instapaper) {
     const el = document.getElementById('instapaperStatus');
-    el.innerHTML = '';
+    el.textContent = '';
     const dot = document.createElement('span');
     dot.className = `dot ${data.instapaper.saved ? 'success' : 'error'}`;
     el.appendChild(dot);
@@ -146,7 +151,7 @@ function displayResults(data) {
 
   if (data.todoist) {
     const el = document.getElementById('todoistStatus');
-    el.innerHTML = '';
+    el.textContent = '';
     const dot = document.createElement('span');
     dot.className = `dot ${data.todoist.created ? 'success' : 'error'}`;
     el.appendChild(dot);
