@@ -17,8 +17,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     openrouterModel: '',
     instapaperUsername: '',
     instapaperPassword: '',
-    todoistApiToken: ''
+    todoistApiToken: '',
+    instapaperEnabled: true,
+    todoistEnabled: true,
+    thingsEnabled: true
   });
+
+  function isMacOrIOS() {
+    return /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.platform === 'MacIntel';
+  }
   const provider = settings.aiProvider || 'anthropic';
   let configWarning = null;
   if (provider === 'anthropic' && (!settings.anthropicApiKey || settings.anthropicApiKey.trim() === '')) {
@@ -33,10 +40,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('analyzeBtn').disabled = true;
   }
 
-  // Only show Instapaper option if credentials are set
+  // Only show Instapaper option if enabled in settings and credentials are set
   const instapaperRow = document.getElementById('saveToInstapaperRow');
   if (instapaperRow) {
-    if (settings.instapaperUsername?.trim() && settings.instapaperPassword) {
+    if (settings.instapaperEnabled !== false && settings.instapaperUsername?.trim() && settings.instapaperPassword) {
       instapaperRow.style.display = '';
     } else {
       instapaperRow.style.display = 'none';
@@ -45,15 +52,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Only show Todoist option if token is set
+  // Only show Todoist option if enabled in settings and token is set
   const todoistRow = document.getElementById('createTodoistRow');
   if (todoistRow) {
-    if (settings.todoistApiToken?.trim()) {
+    if (settings.todoistEnabled !== false && settings.todoistApiToken?.trim()) {
       todoistRow.style.display = '';
     } else {
       todoistRow.style.display = 'none';
       const todoistCheckbox = document.getElementById('createTodoist');
       if (todoistCheckbox) todoistCheckbox.checked = false;
+    }
+  }
+
+  // Only show Things option if enabled in settings and on Mac/iOS (where Things app runs)
+  const thingsRow = document.getElementById('createThingsRow');
+  if (thingsRow) {
+    if (settings.thingsEnabled !== false && isMacOrIOS()) {
+      thingsRow.style.display = '';
+    } else {
+      thingsRow.style.display = 'none';
+      const thingsCheckbox = document.getElementById('createThings');
+      if (thingsCheckbox) thingsCheckbox.checked = false;
     }
   }
 
@@ -70,6 +89,7 @@ async function analyzeAndBookmark() {
   const autoBookmark = document.getElementById('autoBookmark').checked;
   const saveToInstapaper = document.getElementById('saveToInstapaper').checked;
   const createTodoist = document.getElementById('createTodoist').checked;
+  const createThings = document.getElementById('createThings').checked;
 
   analyzeBtn.disabled = true;
   showStatus('Analyzing page...', 'loading');
@@ -81,6 +101,7 @@ async function analyzeAndBookmark() {
       title: currentTitle,
       saveToInstapaper: saveToInstapaper,
       createTodoist: createTodoist,
+      createThings: createThings,
       autoBookmark: autoBookmark
     });
 
@@ -189,5 +210,18 @@ function displayResults(data) {
     el.appendChild(text);
 
     document.getElementById('todoistContainer').style.display = 'block';
+  }
+
+  if (data.things) {
+    const el = document.getElementById('thingsStatus');
+    el.textContent = '';
+    const dot = document.createElement('span');
+    dot.className = `dot ${data.things.opened ? 'success' : 'error'}`;
+    el.appendChild(dot);
+
+    const text = document.createTextNode(data.things.opened ? 'Opened in Things' : (data.things.error || 'Not opened'));
+    el.appendChild(text);
+
+    document.getElementById('thingsContainer').style.display = 'block';
   }
 }

@@ -52,6 +52,10 @@ When the extension saves an article to Instapaper, it sends the **article URL** 
 
 When you choose “Create task in Todoist,” the extension sends **task content** (title, URL, and AI-generated summary) to Todoist’s API. Todoist’s use of data is governed by [Todoist’s privacy policy](https://todoist.com/privacy-policy).
 
+### If you use Things
+
+When you choose “Add to Things,” the extension opens a **things://** URL in a new browser tab. The URL contains the bookmark title, URL, and summary. If you have the Things app (macOS/iOS) installed and set to handle that link, Things will open and create a to-do locally on your device. No data is sent to the extension developer or to Cultured Code’s servers by the extension; the data stays in the URL that your browser and (optionally) Things handle on your device.
+
 ---
 
 ## Chrome Permissions
@@ -70,7 +74,7 @@ The extension does not access sites you don’t open or bookmark through the ext
 
 - **Don’t use AI:** Don’t use the extension; no data is sent.  
 - **Don’t send page content:** Use the extension only when the tab already has a title (e.g. after the page has loaded); the extension may then avoid fetching HTML.  
-- **Limit third parties:** Don’t add Instapaper or Todoist in settings if you don’t want data sent there.  
+- **Limit third parties:** Don’t add Instapaper or Todoist in settings, and don’t use “Add to Things,” if you don’t want data sent or passed to those apps.  
 - **Remove data:** Uninstall the extension and clear Chrome sync data if you want to remove stored settings.
 
 ---

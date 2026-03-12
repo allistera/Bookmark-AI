@@ -321,7 +321,29 @@ async function createTodoistTask(url, title, summary, apiToken) {
   }
 }
 
-async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInstapaperOption, createTodoist, autoBookmark }) {
+/**
+ * Opens the Things app (macOS/iOS) to add a to-do via URL scheme.
+ * Uses things:///add?title=...&notes=... (no API token required).
+ * @see https://culturedcode.com/things/help/url-scheme/
+ */
+async function addToThings(url, title, summary) {
+  const notes = [url, summary].filter(Boolean).join('\n\n');
+  const params = new URLSearchParams({
+    title: title || 'Bookmark',
+    notes: notes
+  });
+  const thingsUrl = `things:///add?${params.toString()}`;
+
+  try {
+    await chrome.tabs.create({ url: thingsUrl });
+    return { success: true };
+  } catch (error) {
+    console.error('Error opening Things:', error);
+    return { success: false, error: error.message || 'Could not open Things' };
+  }
+}
+
+async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInstapaperOption, createTodoist, createThings, autoBookmark }) {
   try {
     // Get settings from storage
     const settings = await chrome.storage.sync.get({
@@ -375,6 +397,12 @@ async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInsta
       );
     }
 
+    // Add to Things if requested (opens things:// URL; no token required)
+    let thingsResult = null;
+    if (createThings) {
+      thingsResult = await addToThings(url, analysis.title, analysis.summary);
+    }
+
     let bookmarkCreated = false;
     let bookmarkId = null;
 
@@ -405,6 +433,10 @@ async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInsta
           created: todoistResult.success,
           taskId: todoistResult.taskId,
           error: todoistResult.error
+        } : null,
+        things: thingsResult ? {
+          opened: thingsResult.success,
+          error: thingsResult.error
         } : null,
         bookmarkCreated: bookmarkCreated,
         chromeBookmarkId: bookmarkId,

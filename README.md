@@ -16,6 +16,7 @@ A Chrome extension that uses AI to automatically categorize and organize your bo
 - **Smart Categorization**: Matches links to your existing bookmark folder structure using AI
 - **Instapaper Integration**: Automatically saves articles to Instapaper (if configured)
 - **Todoist Integration**: Optionally creates tasks in Todoist for the bookmarks
+- **Things Integration**: Optionally add a to-do to Things (macOS/iOS) via its URL scheme—no API key required
 - **Right-Click Support**: Add context menu for quick bookmarking
 
 ## Installation
@@ -49,6 +50,7 @@ A Chrome extension that uses AI to automatically categorize and organize your bo
    - Current page URL
    - Option to automatically save to bookmarks (checked by default)
    - Option to create a task in Todoist
+   - Option to add to Things (macOS/iOS)
    - Option to Save to Instapaper if it is an article (checked by default)
 4. Click "Analyze & Save"
 5. The extension will:
@@ -85,6 +87,11 @@ If you have Todoist configured in Extension Settings, you can:
 1. Check "Create task in Todoist"
 2. A task will be created with the bookmark URL and summary
 
+#### Things Integration
+If you use [Things](https://culturedcode.com/things/) (macOS/iOS), you can:
+1. Check "Add to Things"
+2. A new tab opens with a `things://` link; if Things is installed, it will open and create a to-do with the bookmark title, URL, and summary. No API key or settings required.
+
 #### Analysis Results
 After analysis, you'll see:
 - **Bookmarked to**: The category path where the bookmark was saved
@@ -94,6 +101,7 @@ After analysis, you'll see:
 - **Suggested Categories**: Alternative categories that might fit
 - **Instapaper Status**: Whether article was saved to Instapaper with a link
 - **Todoist Status**: Whether task was created
+- **Things Status**: Whether the Things link was opened
 
 ## Configuration
 
@@ -114,6 +122,7 @@ Access via: Extension popup → "Extension Settings" link
 
 - **Instapaper username & password**: For saving articles to Instapaper
 - **Todoist API token**: For creating tasks in Todoist
+- **Things**: No settings needed. Check “Add to Things” in the popup; the extension opens a link that the Things app (macOS/iOS) can handle.
 
 ## File Structure
 
