@@ -321,7 +321,7 @@ async function createTodoistTask(url, title, summary, apiToken) {
   }
 }
 
-async function handleAnalyzeBookmark({ url, title, createTodoist, autoBookmark }) {
+async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInstapaperOption, createTodoist, autoBookmark }) {
   try {
     // Get settings from storage
     const settings = await chrome.storage.sync.get({
@@ -353,9 +353,9 @@ async function handleAnalyzeBookmark({ url, title, createTodoist, autoBookmark }
     // Analyze the bookmark using the configured AI provider
     const analysis = await analyzeBookmark(url, settings, provider, title);
 
-    // Automatically save to Instapaper if this is an article and credentials are configured
+    // Save to Instapaper if requested, it's an article, and credentials are configured
     let instapaperResult = null;
-    if (analysis.isArticle && settings.instapaperUsername && settings.instapaperPassword) {
+    if (saveToInstapaperOption && analysis.isArticle && settings.instapaperUsername && settings.instapaperPassword) {
       instapaperResult = await saveToInstapaper(
         url,
         analysis.title,

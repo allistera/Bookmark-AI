@@ -14,7 +14,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     aiProvider: 'anthropic',
     anthropicApiKey: '',
     openrouterApiKey: '',
-    openrouterModel: ''
+    openrouterModel: '',
+    instapaperUsername: '',
+    instapaperPassword: '',
+    todoistApiToken: ''
   });
   const provider = settings.aiProvider || 'anthropic';
   let configWarning = null;
@@ -30,6 +33,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('analyzeBtn').disabled = true;
   }
 
+  // Only show Instapaper option if credentials are set
+  const instapaperRow = document.getElementById('saveToInstapaperRow');
+  if (instapaperRow) {
+    if (settings.instapaperUsername?.trim() && settings.instapaperPassword) {
+      instapaperRow.style.display = '';
+    } else {
+      instapaperRow.style.display = 'none';
+      const instapaperCheckbox = document.getElementById('saveToInstapaper');
+      if (instapaperCheckbox) instapaperCheckbox.checked = false;
+    }
+  }
+
+  // Only show Todoist option if token is set
+  const todoistRow = document.getElementById('createTodoistRow');
+  if (todoistRow) {
+    if (settings.todoistApiToken?.trim()) {
+      todoistRow.style.display = '';
+    } else {
+      todoistRow.style.display = 'none';
+      const todoistCheckbox = document.getElementById('createTodoist');
+      if (todoistCheckbox) todoistCheckbox.checked = false;
+    }
+  }
+
   document.getElementById('analyzeBtn').addEventListener('click', analyzeAndBookmark);
   document.getElementById('cancelBtn').addEventListener('click', () => window.close());
   document.getElementById('settingsLink').addEventListener('click', (e) => {
@@ -41,6 +68,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function analyzeAndBookmark() {
   const analyzeBtn = document.getElementById('analyzeBtn');
   const autoBookmark = document.getElementById('autoBookmark').checked;
+  const saveToInstapaper = document.getElementById('saveToInstapaper').checked;
   const createTodoist = document.getElementById('createTodoist').checked;
 
   analyzeBtn.disabled = true;
@@ -51,6 +79,7 @@ async function analyzeAndBookmark() {
       action: 'analyzeBookmark',
       url: currentUrl,
       title: currentTitle,
+      saveToInstapaper: saveToInstapaper,
       createTodoist: createTodoist,
       autoBookmark: autoBookmark
     });
@@ -59,7 +88,7 @@ async function analyzeAndBookmark() {
       displayResults(response.data);
       if (autoBookmark && response.data.bookmarkCreated) {
         showStatus('Saved to ' + response.data.matchedCategory, 'success');
-      } else if (response.data.isArticle && response.data.instapaper?.saved) {
+      } else if (saveToInstapaper && response.data.isArticle && response.data.instapaper?.saved) {
         showStatus('Article saved to Instapaper', 'success');
       } else {
         showStatus('Analysis complete', 'success');
