@@ -9,6 +9,7 @@ export default [
         chrome: 'readonly',
         window: 'readonly',
         document: 'readonly',
+        navigator: 'readonly',
         console: 'readonly',
         fetch: 'readonly',
         URL: 'readonly',
