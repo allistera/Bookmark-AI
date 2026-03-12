@@ -12,7 +12,7 @@ A Chrome extension that uses AI to automatically categorize and organize your bo
 
 ## Features
 
-- **AI-Powered Analysis**: Analyzes web pages using Claude AI to determine the best category
+- **AI-Powered Analysis**: Analyzes web pages using **Anthropic (Claude)** or **OpenRouter** (many models) to determine the best category
 - **Smart Categorization**: Matches links to your existing bookmark folder structure using AI
 - **Instapaper Integration**: Automatically saves articles to Instapaper (if configured)
 - **Todoist Integration**: Optionally creates tasks in Todoist for the bookmarks
@@ -35,7 +35,7 @@ A Chrome extension that uses AI to automatically categorize and organize your bo
 2. **Configure Settings** (Required):
    - Click the extension icon in your toolbar
    - Click "Extension Settings" at the bottom of the popup
-   - Enter your Anthropic API key (required for AI analysis)
+   - Choose **Anthropic** or **OpenRouter** as the AI provider and enter the required API key(s)
    - Optionally add Instapaper and Todoist credentials
    - Click "Save Settings"
 
@@ -52,7 +52,7 @@ A Chrome extension that uses AI to automatically categorize and organize your bo
    - Option to Save to Instapaper if it is an article (checked by default)
 4. Click "Analyze & Save"
 5. The extension will:
-   - Analyze the page using Claude AI
+   - Analyze the page using your chosen AI provider (Anthropic or OpenRouter)
    - Display the AI's analysis results
    - Automatically create the bookmark in the appropriate folder (**or** save articles to Instapaper)
 
@@ -101,9 +101,19 @@ After analysis, you'll see:
 
 Access via: Extension popup → "Extension Settings" link
 
-- **Anthropic API key** (Required): Your Claude AI API key. Must start with `sk-ant-`. Get one at [Anthropic](https://console.anthropic.com/).
-- **Instapaper username & password** (Optional): For saving articles to Instapaper
-- **Todoist API token** (Optional): For creating tasks in Todoist
+**AI provider** (choose one):
+
+- **Anthropic (Claude)**  
+  - **API key** (required if using Anthropic): Your Claude API key. Must start with `sk-ant-`. Get one at [Anthropic](https://console.anthropic.com/).
+
+- **OpenRouter**  
+  - **API key** (required if using OpenRouter): Get a key at [openrouter.ai/keys](https://openrouter.ai/keys).  
+  - **Model**: Choose any model from OpenRouter’s list. In Settings, click **Load Models** to fetch the current list, then pick the model you want (e.g. Claude, GPT-4, Llama, etc.).
+
+**Other (optional):**
+
+- **Instapaper username & password**: For saving articles to Instapaper
+- **Todoist API token**: For creating tasks in Todoist
 
 ## File Structure
 
@@ -131,7 +141,7 @@ Access via: Extension popup → "Extension Settings" link
 3. **Background Worker**:
    - Optionally fetches page HTML for context
    - Reads your existing bookmark folder paths from Chrome
-   - Calls the Anthropic API (Claude) with URL, HTML, and folder list
+   - Calls your chosen AI provider (Anthropic or OpenRouter) with URL, HTML, and folder list
    - Receives: title, summary, categories, matchedCategory, etc.
    - Creates folder hierarchy in Chrome bookmarks if it doesn't exist
    - Creates bookmark in the matched folder (or saves articles to Instapaper)
@@ -162,14 +172,15 @@ The extension requires these permissions:
 
 ## Troubleshooting
 
-### "Anthropic API key not configured" error
-- The extension requires an API key before first use
+### "API key not configured" / "OpenRouter API key not configured" / "No OpenRouter model selected"
+- You must set up at least one AI provider before first use
 - Click "Extension Settings" in the popup
-- Enter your Anthropic API key (must start with `sk-ant-`)
+- For **Anthropic**: enter your Claude API key (must start with `sk-ant-`)
+- For **OpenRouter**: enter your API key from [openrouter.ai/keys](https://openrouter.ai/keys), then click **Load Models** and select a model
 
 ### "Failed to fetch" or network errors
 - Check your internet connection
-- Verify your Anthropic API key is valid in Extension Settings
+- Verify your API key is valid for the provider you selected (Anthropic or OpenRouter)
 - Look at the background worker console for the exact error
 
 ### Extension doesn't load
@@ -177,12 +188,13 @@ The extension requires these permissions:
 
 ### Bookmarks not being created
 - Check the background worker console for errors
-- Verify your Anthropic API key is set in Settings
+- Verify your AI provider (Anthropic or OpenRouter) is configured in Settings
 - Check that you have the bookmarks permission
 - Non-article links are saved to Chrome bookmarks; articles can be saved to Instapaper if configured
 
 ### API errors
-- Verify your Anthropic API key is correct and has not expired
+- **Anthropic**: Ensure your API key is correct and the model is still available (e.g. use a current model like Claude Haiku 4.5)
+- **OpenRouter**: Ensure your API key and selected model are valid; try "Load Models" again to refresh the list
 - Look at the background worker console for detailed error messages
 
 ### Categories not matching
