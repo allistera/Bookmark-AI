@@ -36,6 +36,8 @@ jobs:
             popup.js \
             options.html \
             options.js \
+            health-check.html \
+            health-check.js \
             icons/ \
             README.md \
             -x '*.DS_Store'
