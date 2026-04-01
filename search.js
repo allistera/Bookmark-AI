@@ -85,11 +85,6 @@ function buildResultCard(entry) {
     meta.appendChild(date);
   }
 
-  const badge = document.createElement('span');
-  badge.className = `result-badge ${entry.matchType}`;
-  badge.textContent = entry.matchType === 'semantic' ? 'AI match' : 'keyword';
-  meta.appendChild(badge);
-
   card.appendChild(meta);
   return card;
 }
@@ -149,4 +144,11 @@ async function init() {
   }
 }
 
-init();
+init().then(() => {
+  const params = new URLSearchParams(window.location.search);
+  const q = params.get('q');
+  if (q) {
+    searchInput.value = q;
+    handleSearch();
+  }
+});

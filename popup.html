@@ -55,20 +55,26 @@
       margin-top: 2px;
     }
 
-    .url-section {
-      padding: 12px 16px;
+    .search-section {
+      padding: 10px 16px;
       background: #f8f9fa;
       border-bottom: 1px solid #dadce0;
     }
 
-    .url-text {
-      font-size: 12px;
-      color: #5f6368;
-      word-break: break-all;
-      line-height: 1.4;
-      max-height: 40px;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    .search-section input {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid #dadce0;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: inherit;
+      color: #202124;
+      background: #fff;
+      outline: none;
+    }
+
+    .search-section input:focus {
+      border-color: #1a73e8;
     }
 
     .options-section {
@@ -337,8 +343,8 @@
     </div>
   </div>
 
-  <div class="url-section">
-    <div class="url-text" id="urlDisplay">Loading...</div>
+  <div class="search-section">
+    <input type="text" id="searchInput" placeholder="Search bookmarks…">
   </div>
 
   <div class="options-section">

@@ -7,8 +7,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (tab) {
     currentUrl = tab.url;
     currentTitle = tab.title;
-    document.getElementById('urlDisplay').textContent = currentUrl;
   }
+
+  document.getElementById('searchInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const query = e.target.value.trim();
+      if (query) {
+        chrome.tabs.create({ url: chrome.runtime.getURL('search.html') + '?q=' + encodeURIComponent(query) });
+      }
+    }
+  });
 
   const settings = await chrome.storage.sync.get({
     aiProvider: 'anthropic',
