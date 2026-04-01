@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search Bookmarks – Bookmark AI</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 13px;
+      color: #202124;
+      background: #f8f9fa;
+      line-height: 1.5;
+    }
+
+    .page {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 40px 24px 60px;
+    }
+
+    /* ── Header ── */
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 28px;
+      gap: 16px;
+    }
+
+    .page-header h1 {
+      font-size: 22px;
+      font-weight: 400;
+      color: #202124;
+      margin-bottom: 6px;
+    }
+
+    .page-header p {
+      font-size: 13px;
+      color: #5f6368;
+    }
+
+    .back-link {
+      color: #1a73e8;
+      text-decoration: none;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    /* ── Search bar ── */
+    .search-card {
+      background: #fff;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+    }
+
+    .search-form {
+      display: flex;
+      gap: 10px;
+    }
+
+    .search-input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      color: #202124;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .search-input:focus {
+      border-color: #1a73e8;
+      box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.15);
+    }
+
+    .search-input::placeholder {
+      color: #80868b;
+    }
+
+    .btn {
+      padding: 10px 24px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.1s;
+      border: none;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: #1a73e8;
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #1557b0;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn-primary:disabled {
+      background: #dadce0;
+      color: #80868b;
+      cursor: not-allowed;
+    }
+
+    /* ── Status ── */
+    .status-card {
+      background: #fff;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      padding: 16px 24px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .status-card.visible {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-card .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid #dadce0;
+      border-top-color: #1a73e8;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .status-card .status-text {
+      font-size: 13px;
+      color: #5f6368;
+    }
+
+    .status-card.error {
+      border-color: #f5c6cb;
+      background: #fce8e6;
+    }
+
+    .status-card.error .status-text {
+      color: #c5221f;
+    }
+
+    .status-card.info {
+      border-color: #c8e1ff;
+      background: #e8f0fe;
+    }
+
+    .status-card.info .status-text {
+      color: #1967d2;
+    }
+
+    /* ── Results ── */
+    .results-header {
+      font-size: 13px;
+      color: #5f6368;
+      margin-bottom: 10px;
+      padding: 0 4px;
+    }
+
+    .results-divider {
+      font-size: 12px;
+      color: #5f6368;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 20px 0 10px;
+      padding: 0 4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .results-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #dadce0;
+    }
+
+    .result-card {
+      background: #fff;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 8px;
+      transition: box-shadow 0.15s;
+    }
+
+    .result-card:hover {
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .result-title {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .result-title a {
+      color: #1a0dab;
+      text-decoration: none;
+    }
+
+    .result-title a:hover {
+      text-decoration: underline;
+    }
+
+    .result-url {
+      font-size: 12px;
+      color: #006621;
+      word-break: break-all;
+      margin-bottom: 8px;
+      max-height: 18px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .result-meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .result-folder {
+      font-family: 'Roboto Mono', monospace;
+      font-size: 11px;
+      background: #e8f0fe;
+      color: #1967d2;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    .result-date {
+      font-size: 11px;
+      color: #5f6368;
+    }
+
+    .result-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      font-weight: 500;
+    }
+
+    .result-badge.keyword {
+      background: #e6f4ea;
+      color: #137333;
+    }
+
+    .result-badge.semantic {
+      background: #fef7e0;
+      color: #b05a00;
+    }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: #5f6368;
+      display: none;
+    }
+
+    .empty-state.visible {
+      display: block;
+    }
+
+    .empty-state .empty-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+      opacity: 0.4;
+    }
+
+    .empty-state h2 {
+      font-size: 16px;
+      font-weight: 400;
+      margin-bottom: 8px;
+      color: #202124;
+    }
+
+    .empty-state p {
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="page-header">
+      <div>
+        <h1>Search Bookmarks</h1>
+        <p>Search your bookmarks using natural language</p>
+      </div>
+      <a href="options.html" class="back-link">Settings</a>
+    </div>
+
+    <div class="search-card">
+      <div class="search-form">
+        <input type="text" class="search-input" id="searchInput"
+               placeholder="e.g. find that article about Chrome extension privacy"
+               autofocus>
+        <button class="btn btn-primary" id="searchBtn">Search</button>
+      </div>
+    </div>
+
+    <div class="status-card" id="statusCard">
+      <div class="spinner" id="statusSpinner"></div>
+      <span class="status-text" id="statusText"></span>
+    </div>
+
+    <div id="resultsContainer"></div>
+
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="#dadce0"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      </div>
+      <h2>No bookmarks found</h2>
+      <p>Try different keywords or a broader search query.</p>
+    </div>
+  </div>
+
+  <script src="search.js"></script>
+</body>
+</html>

@@ -50,6 +50,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
   }
+
+  if (request.action === 'parseSearchQuery') {
+    handleParseSearchQuery(request.query)
+      .then(sendResponse)
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  if (request.action === 'searchBookmarksLocal') {
+    handleLocalBookmarkSearch(request.keywords, request.dateRange)
+      .then(sendResponse)
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  if (request.action === 'searchBookmarksSemantic') {
+    handleSemanticBookmarkSearch(request.semanticIntent, request.excludeIds)
+      .then(sendResponse)
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
 });
 
 /**
@@ -118,6 +139,121 @@ async function fetchHtmlContent(url) {
 }
 
 /**
+ * Calls the configured AI provider and returns the raw response text.
+ * @param {string} prompt - The prompt to send
+ * @param {object} settings - User settings from chrome.storage.sync
+ * @param {string} provider - 'anthropic' | 'openai' | 'openrouter'
+ * @param {number} [maxTokens=1024] - Maximum tokens in response
+ * @returns {Promise<string>} Raw response text from the AI
+ */
+async function callAI(prompt, settings, provider, maxTokens = 1024) {
+  if (provider === 'openai') {
+    let response;
+    try {
+      response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${settings.openaiApiKey}`
+        },
+        body: JSON.stringify({
+          model: settings.openaiModel || 'gpt-4o',
+          max_tokens: maxTokens,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+    } catch (error) {
+      console.error('Error calling OpenAI API:', error);
+      throw new Error(`Failed to call OpenAI API: ${error.message}`);
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('OpenAI API error:', response.status, errorText);
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+    }
+
+    const message = await response.json();
+    const responseText = message.choices?.[0]?.message?.content;
+    if (!responseText) {
+      console.error('No content in OpenAI response:', JSON.stringify(message));
+      throw new Error('No content in OpenAI response');
+    }
+    return responseText;
+  } else if (provider === 'openrouter') {
+    let response;
+    try {
+      response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${settings.openrouterApiKey}`,
+          'HTTP-Referer': 'https://github.com/bookmark-ai',
+          'X-Title': 'Bookmark AI'
+        },
+        body: JSON.stringify({
+          model: settings.openrouterModel,
+          max_tokens: maxTokens,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+    } catch (error) {
+      console.error('Error calling OpenRouter API:', error);
+      throw new Error(`Failed to call OpenRouter API: ${error.message}`);
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('OpenRouter API error:', response.status, errorText);
+      throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+    }
+
+    const message = await response.json();
+    const responseText = message.choices?.[0]?.message?.content;
+    if (!responseText) {
+      console.error('No content in OpenRouter response:', JSON.stringify(message));
+      throw new Error('No content in OpenRouter response');
+    }
+    return responseText;
+  } else {
+    let response;
+    try {
+      response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': settings.anthropicApiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: maxTokens,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+    } catch (error) {
+      console.error('Error calling Anthropic API:', error);
+      throw new Error(`Failed to call Claude AI: ${error.message}`);
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Anthropic API error:', response.status, errorText);
+      throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
+    }
+
+    const message = await response.json();
+    const textContent = message.content.find(block => block.type === 'text');
+    if (!textContent) {
+      console.error('No text content in Claude response. Response:', JSON.stringify(message.content));
+      throw new Error('No text content in Claude response');
+    }
+    return textContent.text;
+  }
+}
+
+/**
  * Analyzes a bookmark URL using the configured AI provider
  */
 async function analyzeBookmark(url, settings, provider, providedTitle) {
@@ -170,115 +306,9 @@ Please respond in JSON format:
   "matchedCategory": "Single/Best/Category/Path" (REQUIRED if not an article - return only ONE category)
 }`;
 
-  let responseText;
+  const responseText = await callAI(prompt, settings, provider);
 
-  if (provider === 'openai') {
-    // OpenAI / ChatGPT API call
-    let response;
-    try {
-      response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${settings.openaiApiKey}`
-        },
-        body: JSON.stringify({
-          model: settings.openaiModel || 'gpt-4o',
-          max_tokens: 1024,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      });
-    } catch (error) {
-      console.error('Error calling OpenAI API:', error);
-      throw new Error(`Failed to call OpenAI API: ${error.message}`);
-    }
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenAI API error:', response.status, errorText);
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
-    }
-
-    const message = await response.json();
-    responseText = message.choices?.[0]?.message?.content;
-    if (!responseText) {
-      console.error('No content in OpenAI response:', JSON.stringify(message));
-      throw new Error('No content in OpenAI response');
-    }
-  } else if (provider === 'openrouter') {
-    // OpenRouter API call (OpenAI-compatible format)
-    let response;
-    try {
-      response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${settings.openrouterApiKey}`,
-          'HTTP-Referer': 'https://github.com/bookmark-ai',
-          'X-Title': 'Bookmark AI'
-        },
-        body: JSON.stringify({
-          model: settings.openrouterModel,
-          max_tokens: 1024,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      });
-    } catch (error) {
-      console.error('Error calling OpenRouter API:', error);
-      throw new Error(`Failed to call OpenRouter API: ${error.message}`);
-    }
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenRouter API error:', response.status, errorText);
-      throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
-    }
-
-    const message = await response.json();
-    responseText = message.choices?.[0]?.message?.content;
-    if (!responseText) {
-      console.error('No content in OpenRouter response:', JSON.stringify(message));
-      throw new Error('No content in OpenRouter response');
-    }
-  } else {
-    // Anthropic API call
-    let response;
-    try {
-      response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': settings.anthropicApiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 1024,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      });
-    } catch (error) {
-      console.error('Error calling Anthropic API:', error);
-      throw new Error(`Failed to call Claude AI: ${error.message}`);
-    }
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Anthropic API error:', response.status, errorText);
-      throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
-    }
-
-    const message = await response.json();
-    const textContent = message.content.find(block => block.type === 'text');
-    if (!textContent) {
-      console.error('No text content in Claude response. Response:', JSON.stringify(message.content));
-      throw new Error('No text content in Claude response');
-    }
-    responseText = textContent.text;
-  }
-
-  // Parse the JSON response (same for both providers)
+  // Parse the JSON response
   const jsonMatch = responseText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
     console.error('Could not find JSON in AI response. Response text:', responseText);
@@ -645,6 +675,239 @@ chrome.alarms.onAlarm.addListener((alarm) => {
     runHealthCheck().catch(console.error);
   }
 });
+
+// ============================================================
+// Bookmark Search
+// ============================================================
+
+/**
+ * Builds a map of bookmark node IDs to their folder paths.
+ * @returns {Promise<Object<string, string>>} Map of nodeId -> "Folder/Path"
+ */
+async function getFolderPathMap() {
+  const tree = await chrome.bookmarks.getTree();
+  const map = {};
+
+  function traverse(nodes, path = '') {
+    for (const node of nodes) {
+      if (node.url) continue;
+
+      if (node.parentId === '0') {
+        if (node.children) traverse(node.children, '');
+        continue;
+      }
+
+      const currentPath = path ? `${path}/${node.title}` : node.title;
+      if (node.title) map[node.id] = currentPath;
+      if (node.children) traverse(node.children, currentPath);
+    }
+  }
+
+  traverse(tree);
+  return map;
+}
+
+/**
+ * Gets AI provider settings and validates credentials.
+ * @returns {Promise<{settings: object, provider: string, hasAI: boolean}>}
+ */
+async function getAIConfig() {
+  const settings = await chrome.storage.sync.get({
+    aiProvider: 'anthropic',
+    anthropicApiKey: '',
+    openaiApiKey: '',
+    openaiModel: 'gpt-4o',
+    openrouterApiKey: '',
+    openrouterModel: ''
+  });
+
+  const provider = settings.aiProvider || 'anthropic';
+  let hasAI = false;
+
+  if (provider === 'openai' && settings.openaiApiKey?.trim()) {
+    hasAI = true;
+  } else if (provider === 'openrouter' && settings.openrouterApiKey?.trim() && settings.openrouterModel?.trim()) {
+    hasAI = true;
+  } else if (provider === 'anthropic' && settings.anthropicApiKey?.trim()) {
+    hasAI = true;
+  }
+
+  return { settings, provider, hasAI };
+}
+
+/**
+ * Uses AI to parse a natural language search query into structured parameters.
+ * Falls back to simple keyword splitting if AI is not configured.
+ */
+async function handleParseSearchQuery(query) {
+  const { settings, provider, hasAI } = await getAIConfig();
+
+  if (!hasAI) {
+    // Fallback: split query into keywords, strip common filler words
+    const stopWords = new Set([
+      'find', 'show', 'me', 'my', 'all', 'the', 'that', 'about',
+      'bookmarks', 'bookmark', 'links', 'link', 'saved', 'i', 'were',
+      'what', 'where', 'which', 'a', 'an', 'of', 'to', 'in', 'for',
+      'with', 'on', 'at', 'from', 'by', 'it', 'is', 'was', 'are'
+    ]);
+    const keywords = query.toLowerCase().split(/\s+/)
+      .filter(w => w.length > 1 && !stopWords.has(w));
+    return {
+      success: true,
+      data: { keywords, dateRange: null, semanticIntent: query },
+      hasAI: false
+    };
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+  const prompt = `Extract search parameters from this bookmark search query.
+Today's date is ${today}.
+
+Query: "${query}"
+
+Respond in JSON only:
+{
+  "keywords": ["keyword1", "keyword2"],
+  "dateRange": {"after": "YYYY-MM-DD", "before": "YYYY-MM-DD"} or null,
+  "semanticIntent": "brief description of what user is looking for"
+}`;
+
+  const responseText = await callAI(prompt, settings, provider, 256);
+
+  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('Could not parse AI response');
+
+  const parsed = JSON.parse(jsonMatch[0]);
+  return {
+    success: true,
+    data: {
+      keywords: parsed.keywords || [],
+      dateRange: parsed.dateRange || null,
+      semanticIntent: parsed.semanticIntent || query
+    },
+    hasAI: true
+  };
+}
+
+/**
+ * Searches bookmarks locally using Chrome's search API with keyword matching
+ * and optional date filtering. Enriches results with folder paths.
+ */
+async function handleLocalBookmarkSearch(keywords, dateRange) {
+  if (!keywords || keywords.length === 0) {
+    return { success: true, results: [] };
+  }
+
+  const folderMap = await getFolderPathMap();
+  const seen = new Set();
+  const results = [];
+
+  // Search for each keyword and merge results
+  for (const keyword of keywords) {
+    if (!keyword.trim()) continue;
+    const matches = await chrome.bookmarks.search({ query: keyword });
+    for (const bm of matches) {
+      if (!bm.url || seen.has(bm.id)) continue;
+      seen.add(bm.id);
+
+      // Apply date filtering
+      if (dateRange) {
+        const added = bm.dateAdded || 0;
+        if (dateRange.after) {
+          const afterMs = new Date(dateRange.after).getTime();
+          if (added < afterMs) continue;
+        }
+        if (dateRange.before) {
+          const beforeMs = new Date(dateRange.before).getTime();
+          if (added > beforeMs) continue;
+        }
+      }
+
+      results.push({
+        id: bm.id,
+        title: bm.title,
+        url: bm.url,
+        dateAdded: bm.dateAdded,
+        folderPath: folderMap[bm.parentId] || '',
+        matchType: 'keyword'
+      });
+    }
+  }
+
+  return { success: true, results };
+}
+
+/**
+ * Uses AI to find semantically relevant bookmarks that keyword search may miss.
+ * Processes bookmarks in batches to stay within token limits.
+ */
+async function handleSemanticBookmarkSearch(semanticIntent, excludeIds) {
+  const { settings, provider, hasAI } = await getAIConfig();
+
+  if (!hasAI) {
+    return { success: true, results: [] };
+  }
+
+  const allBookmarks = await getAllBookmarks();
+  const folderMap = await getFolderPathMap();
+  const excludeSet = new Set(excludeIds || []);
+
+  // Filter out already-found bookmarks
+  const candidates = allBookmarks.filter(bm => !excludeSet.has(bm.id));
+
+  const BATCH_SIZE = 200;
+  const MAX_BATCHES = 3;
+  const allResults = [];
+
+  for (let i = 0; i < candidates.length && i < BATCH_SIZE * MAX_BATCHES; i += BATCH_SIZE) {
+    const batch = candidates.slice(i, i + BATCH_SIZE);
+
+    // Build compact bookmark list
+    const bookmarkData = batch.map(bm => ({
+      id: bm.id,
+      t: bm.title || '',
+      u: bm.url
+    }));
+
+    const prompt = `Given this search intent: "${semanticIntent}"
+
+Rate each bookmark's relevance (0-10). Return ONLY a JSON array of objects with "id" and "score" for bookmarks scoring 5 or higher. Return an empty array [] if none are relevant.
+
+Bookmarks:
+${JSON.stringify(bookmarkData)}`;
+
+    try {
+      const responseText = await callAI(prompt, settings, provider, 1024);
+      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        const scored = JSON.parse(jsonMatch[0]);
+        for (const item of scored) {
+          if (item.score >= 5) {
+            const bm = batch.find(b => b.id === item.id);
+            if (bm) {
+              allResults.push({
+                id: bm.id,
+                title: bm.title,
+                url: bm.url,
+                dateAdded: bm.dateAdded,
+                folderPath: folderMap[bm.parentId] || '',
+                matchType: 'semantic',
+                score: item.score
+              });
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Semantic search batch error:', error);
+      // Continue with next batch on error
+    }
+  }
+
+  // Sort by score descending
+  allResults.sort((a, b) => b.score - a.score);
+  return { success: true, results: allResults };
+}
 
 // ============================================================
 // Health Check
