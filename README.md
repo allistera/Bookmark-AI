@@ -12,56 +12,55 @@ A Chrome extension that uses AI to automatically categorize and organize your bo
 
 ## Features
 
-- **AI-Powered Analysis**: Analyzes web pages using Claude AI to determine the best category
-- **Automatic Organization**: Creates bookmarks in appropriate folders automatically
-- **Hierarchical Categories**: Organizes bookmarks in a multi-level folder hierarchy
+- **AI-Powered Analysis**: Analyzes web pages using **Anthropic (Claude)** or **OpenRouter** (many models) to determine the best category
+- **Smart Categorization**: Matches links to your existing bookmark folder structure using AI
 - **Instapaper Integration**: Automatically saves articles to Instapaper (if configured)
-- **Todoist Integration**: Optionally creates tasks in Todoist for bookmarks
-- **Smart Categorization**: Uses your custom category hierarchy from `bookmark_format.yaml`
+- **Todoist Integration**: Optionally creates tasks in Todoist for the bookmarks
+- **Things Integration**: Optionally add a to-do to Things (macOS/iOS) via its URL scheme—no API key required
 - **Right-Click Support**: Add context menu for quick bookmarking
 
 ## Installation
 
-### Prerequisites
+### Install from Chrome Extention Store
 
-1. Make sure your Bookmark AI API is deployed and running (see main project README)
-2. Have your API endpoint URL ready (e.g., `https://bookmark-ai.your-domain.workers.dev`)
 
-### Install the Extension
+
+### Install the Extension Manually
 
 1. **Load in Chrome**:
    - Open Chrome and go to `chrome://extensions/`
    - Enable "Developer mode" (toggle in top-right corner)
    - Click "Load unpacked"
-   - Select the `extension` directory from this project
+   - Select this project directory
 
 2. **Configure Settings** (Required):
    - Click the extension icon in your toolbar
    - Click "Extension Settings" at the bottom of the popup
-   - Enter your API endpoint URL (e.g., `https://bookmark-ai.your-account.workers.dev`)
+   - Choose **Anthropic** or **OpenRouter** as the AI provider and enter the required API key(s)
+   - Optionally add Instapaper and Todoist credentials
    - Click "Save Settings"
-
-   **Important:** You must deploy your Bookmark AI backend to Cloudflare Workers first and configure the extension with your worker URL before it can be used. See the [Deployment section](#deployment) in the main README.
 
 ## Usage
 
 ### Basic Usage
 
 1. Navigate to any web page you want to bookmark
-2. Click the Bookmark AI extension icon in your toolbar
+2. Click the Bookmark AI extension icon in your toolbar (You may want to pin it to your bookmark bar!)
 3. The popup will show:
    - Current page URL
    - Option to automatically save to bookmarks (checked by default)
    - Option to create a task in Todoist
-4. Click "Analyze & Bookmark"
+   - Option to add to Things (macOS/iOS)
+   - Option to Save to Instapaper if it is an article (checked by default)
+4. Click "Analyze & Save"
 5. The extension will:
-   - Send the URL to your API for analysis
+   - Analyze the page using your chosen AI provider (Anthropic or OpenRouter)
    - Display the AI's analysis results
-   - Automatically create the bookmark in the appropriate folder
+   - Automatically create the bookmark in the appropriate folder (**or** save articles to Instapaper)
 
 ### Bookmark Organization
 
-Bookmarks are organized in your bookmarks bar with subfolders matching the categories from your `bookmark_format.yaml` file.
+Bookmarks are organized in your bookmarks bar. The extension uses your existing folder structure and asks the AI to match each link to the best existing folder (or suggest a new one).
 
 ```
 Bookmarks Bar/
@@ -84,9 +83,14 @@ When the "Automatically save to bookmarks" option is checked (default), the exte
 4. Save the bookmark automatically
 
 #### Todoist Integration
-If you have Todoist configured in your API (via environment variables), you can:
+If you have Todoist configured in Extension Settings, you can:
 1. Check "Create task in Todoist"
 2. A task will be created with the bookmark URL and summary
+
+#### Things Integration
+If you use [Things](https://culturedcode.com/things/) (macOS/iOS), you can:
+1. Check "Add to Things"
+2. A new tab opens with a `things://` link; if Things is installed, it will open and create a to-do with the bookmark title, URL, and summary. No API key or settings required.
 
 #### Analysis Results
 After analysis, you'll see:
@@ -95,8 +99,9 @@ After analysis, you'll see:
 - **Summary**: Brief summary of the page content
 - **Content Type**: Whether it's an article or other content
 - **Suggested Categories**: Alternative categories that might fit
-- **Instapaper Status**: Whether article was saved to Instapaper
+- **Instapaper Status**: Whether article was saved to Instapaper with a link
 - **Todoist Status**: Whether task was created
+- **Things Status**: Whether the Things link was opened
 
 ## Configuration
 
@@ -104,29 +109,28 @@ After analysis, you'll see:
 
 Access via: Extension popup → "Extension Settings" link
 
-- **API Endpoint**: URL of your Bookmark AI API (Required)
-  - No default - you must configure this before first use
-  - Format: `https://bookmark-ai.[your-cloudflare-account].workers.dev`
-  - Get this URL after deploying your Cloudflare Worker
+**AI provider** (choose one):
 
-### API Configuration
+- **Anthropic (Claude)**
+  - **API key** (required if using Anthropic): Your Claude API key. Must start with `sk-ant-`. Get one at [Anthropic](https://console.anthropic.com/).
 
-The extension uses the same API backend as the bookmarklet. Configure your API with:
+- **OpenRouter**
+  - **API key** (required if using OpenRouter): Get a key at [openrouter.ai/keys](https://openrouter.ai/keys).
+  - **Model**: Choose any model from OpenRouter’s list. In Settings, click **Load Models** to fetch the current list, then pick the model you want (e.g. Claude, GPT-4, Llama, etc.).
 
-- **ANTHROPIC_API_KEY**: Your Claude AI API key
-- **INSTAPAPER_USERNAME** & **INSTAPAPER_PASSWORD**: For article saving (optional)
-- **TODOIST_API_TOKEN**: For task creation (optional)
+**Other (optional):**
 
-See the main project README for API setup instructions.
+- **Instapaper username & password**: For saving articles to Instapaper
+- **Todoist API token**: For creating tasks in Todoist
+- **Things**: No settings needed. Check “Add to Things” in the popup; the extension opens a link that the Things app (macOS/iOS) can handle.
 
 ## File Structure
 
 ```
-extension/
 ├── manifest.json           # Extension configuration
 ├── popup.html             # Main popup UI
 ├── popup.js               # Popup logic
-├── background.js          # Service worker (handles API calls & bookmarks)
+├── background.js          # Service worker (handles AI calls & bookmarks)
 ├── options.html           # Settings page UI
 ├── options.js             # Settings page logic
 ├── icons/                 # Extension icons
@@ -136,19 +140,20 @@ extension/
 │   ├── icon128.png
 │   ├── image.png         # Source logo
 │   └── icon.svg          # Source icon design
-└── README.md             # This file
+└── README.md
 ```
 
 ## How It Works
 
 1. **User Clicks Extension**: Opens popup with current tab URL
-2. **User Clicks "Analyze & Bookmark"**: Sends message to background service worker
+2. **User Clicks "Analyze & Save"**: Sends message to background service worker
 3. **Background Worker**:
-   - Fetches analysis from your API endpoint (`/api/bookmarks`)
+   - Optionally fetches page HTML for context
+   - Reads your existing bookmark folder paths from Chrome
+   - Calls your chosen AI provider (Anthropic or OpenRouter) with URL, HTML, and folder list
    - Receives: title, summary, categories, matchedCategory, etc.
-   - Parses the `matchedCategory` path (e.g., "Work_and_Engineering/Software_Development")
    - Creates folder hierarchy in Chrome bookmarks if it doesn't exist
-   - Creates bookmark in the final folder
+   - Creates bookmark in the matched folder (or saves articles to Instapaper)
 4. **Results Displayed**: Shows analysis results and confirmation in popup
 
 ## Permissions
@@ -157,7 +162,7 @@ The extension requires these permissions:
 
 - **bookmarks**: To create and organize bookmarks
 - **activeTab**: To get the current tab's URL and title
-- **storage**: To save your API endpoint configuration
+- **storage**: To save your settings (API key, Instapaper, Todoist)
 
 ## Development
 
@@ -176,48 +181,34 @@ The extension requires these permissions:
 
 ## Troubleshooting
 
-### "API endpoint not configured" error
-- The extension requires configuration before first use
+### "API key not configured" / "OpenRouter API key not configured" / "No OpenRouter model selected"
+- You must set up at least one AI provider before first use
 - Click "Extension Settings" in the popup
-- Enter your Cloudflare Worker URL (e.g., `https://bookmark-ai.your-account.workers.dev`)
-- Make sure you've deployed the backend first (see main README)
+- For **Anthropic**: enter your Claude API key (must start with `sk-ant-`)
+- For **OpenRouter**: enter your API key from [openrouter.ai/keys](https://openrouter.ai/keys), then click **Load Models** and select a model
 
-### "Failed to fetch" or "ERR_NAME_NOT_RESOLVED" errors
-- Your API endpoint URL is incorrect or the worker isn't deployed
-- Verify the URL in Extension Settings matches your deployed worker
-- Test your worker by visiting the URL in a browser - you should see a welcome message
-- Make sure you deployed using `npm run deploy` or via GitHub Actions
+### "Failed to fetch" or network errors
+- Check your internet connection
+- Verify your API key is valid for the provider you selected (Anthropic or OpenRouter)
+- Look at the background worker console for the exact error
 
 ### Extension doesn't load
 - Check for errors in `chrome://extensions/` with Developer mode enabled
 
 ### Bookmarks not being created
 - Check the background worker console for errors
-- Verify your API endpoint is correct in settings
-- Make sure your API is deployed and accessible
+- Verify your AI provider (Anthropic or OpenRouter) is configured in Settings
 - Check that you have the bookmarks permission
+- Non-article links are saved to Chrome bookmarks; articles can be saved to Instapaper if configured
 
 ### API errors
-- Verify your API endpoint URL is correct
-- Make sure your Cloudflare Worker is deployed
-- Check that your ANTHROPIC_API_KEY is configured
+- **Anthropic**: Ensure your API key is correct and the model is still available (e.g. use a current model like Claude Haiku 4.5)
+- **OpenRouter**: Ensure your API key and selected model are valid; try "Load Models" again to refresh the list
 - Look at the background worker console for detailed error messages
 
 ### Categories not matching
-- The extension uses the same `bookmark_format.yaml` that your API uses
-- Make sure your API is up to date with your desired categories
-- The category path comes from the AI analysis, not from the extension
-
-## Comparison to Bookmarklet
-
-| Feature | Chrome Extension | Bookmarklet |
-|---------|------------------|-------------|
-| Automatic bookmark creation | ✅ Yes | ❌ No (display only) |
-| Chrome bookmarks API | ✅ Yes | ❌ No access |
-| Folder organization | ✅ Yes | ❌ No |
-| Installation required | ⚠️ Yes (manual) | ✅ No |
-| Updates | ⚠️ Manual reload | ✅ Automatic |
-| Works on all sites | ⚠️ Most sites | ✅ All sites |
+- The extension sends your existing Chrome bookmark folder paths to the AI; it picks the best match or suggests a new path
+- Create the folders you want in your bookmarks bar first, or let the extension create new ones from the AI suggestion
 
 ## Future Enhancements
 
@@ -229,17 +220,13 @@ Possible improvements:
 - Sync settings across devices
 - Support for other browsers (Firefox, Edge)
 
-## License
-
-Same as the main Bookmark AI project.
-
 ## Support
 
 For issues or questions:
-1. Check the main project README
+1. Check this README and the Troubleshooting section above
 2. Open an issue on the GitHub repository
 3. Check the background worker console for error messages
 
 ## Credits
 
-Part of the [Bookmark AI](https://github.com/allistera/Bookmark-AI) project.
+Allister Antosik - allistera

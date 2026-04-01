@@ -6,7 +6,10 @@ const DEFAULT_SETTINGS = {
   openrouterModel: '',
   instapaperUsername: '',
   instapaperPassword: '',
-  todoistApiToken: ''
+  todoistApiToken: '',
+  instapaperEnabled: true,
+  todoistEnabled: true,
+  thingsEnabled: true
 };
 
 let currentProvider = 'anthropic';
@@ -52,6 +55,9 @@ async function loadSettings() {
     document.getElementById('instapaperUsername').value = settings.instapaperUsername;
     document.getElementById('instapaperPassword').value = settings.instapaperPassword;
     document.getElementById('todoistApiToken').value = settings.todoistApiToken;
+    document.getElementById('instapaperEnabled').checked = settings.instapaperEnabled !== false;
+    document.getElementById('todoistEnabled').checked = settings.todoistEnabled !== false;
+    document.getElementById('thingsEnabled').checked = settings.thingsEnabled !== false;
 
     // If an OpenRouter model was previously saved, load the model list and pre-select it
     if (settings.openrouterApiKey && settings.openrouterModel) {
@@ -91,10 +97,9 @@ async function loadOpenRouterModels(preselectedModel = null) {
     models.sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
 
     const currentValue = preselectedModel || select.value;
-    select.innerHTML = '';
+    select.textContent = '';
 
     const fragment = document.createDocumentFragment();
-
     const defaultOption = document.createElement('option');
     defaultOption.value = '';
     defaultOption.textContent = 'Select a model...';
@@ -154,6 +159,10 @@ async function saveSettings(event) {
     }
   }
 
+  const instapaperEnabled = document.getElementById('instapaperEnabled').checked;
+  const todoistEnabled = document.getElementById('todoistEnabled').checked;
+  const thingsEnabled = document.getElementById('thingsEnabled').checked;
+
   try {
     await chrome.storage.sync.set({
       aiProvider: currentProvider,
@@ -162,7 +171,10 @@ async function saveSettings(event) {
       openrouterModel,
       instapaperUsername,
       instapaperPassword,
-      todoistApiToken
+      todoistApiToken,
+      instapaperEnabled,
+      todoistEnabled,
+      thingsEnabled
     });
 
     showStatus('Settings saved successfully!', 'success');

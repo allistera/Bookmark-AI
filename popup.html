@@ -349,10 +349,24 @@
         <span class="toggle-slider"></span>
       </div>
     </label>
-    <label class="option-row" for="createTodoist">
+    <label class="option-row" id="saveToInstapaperRow" for="saveToInstapaper">
+      <span class="option-label">Save to Instapaper (if article)</span>
+      <div class="toggle">
+        <input type="checkbox" id="saveToInstapaper" checked>
+        <span class="toggle-slider"></span>
+      </div>
+    </label>
+    <label class="option-row" id="createTodoistRow" for="createTodoist">
       <span class="option-label">Create Todoist task</span>
       <div class="toggle">
         <input type="checkbox" id="createTodoist">
+        <span class="toggle-slider"></span>
+      </div>
+    </label>
+    <label class="option-row" id="createThingsRow" for="createThings">
+      <span class="option-label">Add to Things</span>
+      <div class="toggle">
+        <input type="checkbox" id="createThings">
         <span class="toggle-slider"></span>
       </div>
     </label>
@@ -399,6 +413,11 @@
     <div class="result-item" id="todoistContainer" style="display: none;">
       <div class="result-label">Todoist</div>
       <div class="result-value integration-status" id="todoistStatus"></div>
+    </div>
+
+    <div class="result-item" id="thingsContainer" style="display: none;">
+      <div class="result-label">Things</div>
+      <div class="result-value integration-status" id="thingsStatus"></div>
     </div>
   </div>
 

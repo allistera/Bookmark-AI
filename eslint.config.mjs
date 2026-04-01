@@ -9,13 +9,15 @@ export default [
         chrome: 'readonly',
         window: 'readonly',
         document: 'readonly',
+        navigator: 'readonly',
         console: 'readonly',
         fetch: 'readonly',
         URL: 'readonly',
         URLSearchParams: 'readonly',
         btoa: 'readonly',
         setTimeout: 'readonly',
-        importScripts: 'readonly'
+        importScripts: 'readonly',
+        DOMParser: 'readonly'
       }
     },
     rules: {

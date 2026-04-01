@@ -178,7 +178,7 @@ Please respond in JSON format:
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-3-5-haiku-20241022',
+          model: 'claude-haiku-4-5-20251001',
           max_tokens: 1024,
           messages: [{ role: 'user', content: prompt }]
         })
@@ -321,7 +321,29 @@ async function createTodoistTask(url, title, summary, apiToken) {
   }
 }
 
-async function handleAnalyzeBookmark({ url, title, createTodoist, autoBookmark }) {
+/**
+ * Opens the Things app (macOS/iOS) to add a to-do via URL scheme.
+ * Uses things:///add?title=...&notes=... (no API token required).
+ * @see https://culturedcode.com/things/help/url-scheme/
+ */
+async function addToThings(url, title, summary) {
+  const notes = [url, summary].filter(Boolean).join('\n\n');
+  const params = new URLSearchParams({
+    title: title || 'Bookmark',
+    notes: notes
+  });
+  const thingsUrl = `things:///add?${params.toString()}`;
+
+  try {
+    await chrome.tabs.create({ url: thingsUrl });
+    return { success: true };
+  } catch (error) {
+    console.error('Error opening Things:', error);
+    return { success: false, error: error.message || 'Could not open Things' };
+  }
+}
+
+async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInstapaperOption, createTodoist, createThings, autoBookmark }) {
   try {
     // Get settings from storage
     const settings = await chrome.storage.sync.get({
@@ -353,9 +375,9 @@ async function handleAnalyzeBookmark({ url, title, createTodoist, autoBookmark }
     // Analyze the bookmark using the configured AI provider
     const analysis = await analyzeBookmark(url, settings, provider, title);
 
-    // Automatically save to Instapaper if this is an article and credentials are configured
+    // Save to Instapaper if requested, it's an article, and credentials are configured
     let instapaperResult = null;
-    if (analysis.isArticle && settings.instapaperUsername && settings.instapaperPassword) {
+    if (saveToInstapaperOption && analysis.isArticle && settings.instapaperUsername && settings.instapaperPassword) {
       instapaperResult = await saveToInstapaper(
         url,
         analysis.title,
@@ -373,6 +395,12 @@ async function handleAnalyzeBookmark({ url, title, createTodoist, autoBookmark }
         analysis.summary,
         settings.todoistApiToken
       );
+    }
+
+    // Add to Things if requested (opens things:// URL; no token required)
+    let thingsResult = null;
+    if (createThings) {
+      thingsResult = await addToThings(url, analysis.title, analysis.summary);
     }
 
     let bookmarkCreated = false;
@@ -405,6 +433,10 @@ async function handleAnalyzeBookmark({ url, title, createTodoist, autoBookmark }
           created: todoistResult.success,
           taskId: todoistResult.taskId,
           error: todoistResult.error
+        } : null,
+        things: thingsResult ? {
+          opened: thingsResult.success,
+          error: thingsResult.error
         } : null,
         bookmarkCreated: bookmarkCreated,
         chromeBookmarkId: bookmarkId,

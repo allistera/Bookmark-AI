@@ -91,6 +91,26 @@
       margin-bottom: 0;
     }
 
+    .form-group-inline {
+      margin-bottom: 16px;
+    }
+
+    .toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: #202124;
+    }
+
+    .toggle-label input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
     .form-label {
       display: block;
       font-size: 13px;
@@ -419,6 +439,12 @@
           <span class="badge optional">Optional</span>
         </div>
         <div class="card-body">
+          <div class="form-group form-group-inline">
+            <label class="toggle-label">
+              <input type="checkbox" id="instapaperEnabled" name="instapaperEnabled">
+              <span>Enable Instapaper</span>
+            </label>
+          </div>
           <div class="form-hint" style="margin-bottom: 16px;">
             Articles will be automatically saved to Instapaper for reading later.
           </div>
@@ -454,6 +480,12 @@
           <span class="badge optional">Optional</span>
         </div>
         <div class="card-body">
+          <div class="form-group form-group-inline">
+            <label class="toggle-label">
+              <input type="checkbox" id="todoistEnabled" name="todoistEnabled">
+              <span>Enable Todoist</span>
+            </label>
+          </div>
           <div class="form-group">
             <label class="form-label" for="todoistApiToken">API Token</label>
             <div class="form-hint">
@@ -467,6 +499,24 @@
               placeholder="Your Todoist API token"
               autocomplete="off"
             >
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Things</span>
+          <span class="badge optional">Optional</span>
+        </div>
+        <div class="card-body">
+          <div class="form-group form-group-inline">
+            <label class="toggle-label">
+              <input type="checkbox" id="thingsEnabled" name="thingsEnabled">
+              <span>Enable Things</span>
+            </label>
+          </div>
+          <div class="form-hint">
+            Add bookmarks as to-dos in the Things app (macOS/iOS). The option only appears in the popup when you're on a Mac or iOS device.
           </div>
         </div>
       </div>
