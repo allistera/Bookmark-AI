@@ -94,35 +94,22 @@ function buildResultCard(entry) {
   return card;
 }
 
-function renderResults(keywordResults, semanticResults) {
+function renderResults(results) {
   resultsContainer.textContent = '';
   emptyState.classList.remove('visible');
 
-  const totalCount = keywordResults.length + semanticResults.length;
-
-  if (totalCount === 0) {
+  if (results.length === 0) {
     emptyState.classList.add('visible');
     return;
   }
 
   const header = document.createElement('div');
   header.className = 'results-header';
-  header.textContent = `Found ${totalCount} bookmark${totalCount !== 1 ? 's' : ''}`;
+  header.textContent = `Found ${results.length} bookmark${results.length !== 1 ? 's' : ''}`;
   resultsContainer.appendChild(header);
 
-  for (const entry of keywordResults) {
+  for (const entry of results) {
     resultsContainer.appendChild(buildResultCard(entry));
-  }
-
-  if (semanticResults.length > 0) {
-    const divider = document.createElement('div');
-    divider.className = 'results-divider';
-    divider.textContent = 'AI-discovered matches';
-    resultsContainer.appendChild(divider);
-
-    for (const entry of semanticResults) {
-      resultsContainer.appendChild(buildResultCard(entry));
-    }
   }
 }
 
@@ -134,69 +121,32 @@ async function handleSearch() {
   resultsContainer.textContent = '';
   emptyState.classList.remove('visible');
 
-  let keywordResults = [];
-  let semanticResults = [];
-
   try {
-    // Phase 1: Parse query
-    showStatus('Understanding your query\u2026');
-    const parseResult = await sendMessage({
-      action: 'parseSearchQuery',
-      query: query
-    });
-
-    if (!parseResult.success) {
-      throw new Error(parseResult.error);
-    }
-
-    const { keywords, dateRange, semanticIntent } = parseResult.data;
-    const hasAI = parseResult.hasAI;
-
-    // Phase 2: Local keyword search
     showStatus('Searching bookmarks\u2026');
-    const localResult = await sendMessage({
-      action: 'searchBookmarksLocal',
-      keywords: keywords,
-      dateRange: dateRange
+    const result = await sendMessage({
+      action: 'searchBookmarksSemantic',
+      semanticIntent: query,
+      excludeIds: []
     });
 
-    if (!localResult.success) {
-      throw new Error(localResult.error);
-    }
+    if (!result.success) throw new Error(result.error);
 
-    keywordResults = localResult.results;
-
-    // Show keyword results immediately
-    renderResults(keywordResults, []);
-
-    // Phase 3: Semantic search (if AI is configured and few keyword results)
-    if (hasAI && keywordResults.length < 5) {
-      showStatus('Finding more results with AI\u2026');
-      const semanticResult = await sendMessage({
-        action: 'searchBookmarksSemantic',
-        semanticIntent: semanticIntent,
-        excludeIds: keywordResults.map(r => r.id)
-      });
-
-      if (semanticResult.success) {
-        semanticResults = semanticResult.results;
-      }
-    }
-
-    // Final render with all results
-    renderResults(keywordResults, semanticResults);
+    renderResults(result.results);
     hideStatus();
-
-    if (keywordResults.length === 0 && semanticResults.length === 0) {
-      emptyState.classList.add('visible');
-    }
-
-    if (!hasAI && keywordResults.length === 0) {
-      showStatus('Configure an AI provider in Settings to enable semantic search.', 'info');
-    }
   } catch (error) {
     showStatus(error.message, 'error');
   } finally {
     searchBtn.disabled = false;
   }
 }
+
+async function init() {
+  const result = await sendMessage({ action: 'checkAIConfig' });
+  if (!result.hasAI) {
+    searchBtn.disabled = true;
+    searchInput.disabled = true;
+    showStatus('Configure an AI provider in Settings to enable search.', 'info');
+  }
+}
+
+init();
