@@ -8,7 +8,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "build:icons": "node scripts/build-icons.mjs",
-    "build": "zip -r bookmark-ai.zip manifest.json background.js popup.html popup.js options.html options.js icons/ README.md -x '*.DS_Store'"
+    "build": "zip -r bookmark-ai.zip manifest.json background.js popup.html popup.js options.html options.js health-check.html health-check.js icons/ README.md -x '*.DS_Store'"
   },
   "devDependencies": {
     "eslint": "^10.1.0",
