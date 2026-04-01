@@ -328,11 +328,9 @@ async function createTodoistTask(url, title, summary, apiToken) {
  */
 async function addToThings(url, title, summary) {
   const notes = [url, summary].filter(Boolean).join('\n\n');
-  const params = new URLSearchParams({
-    title: title || 'Bookmark',
-    notes: notes
-  });
-  const thingsUrl = `things:///add?${params.toString()}`;
+  const titleEncoded = encodeURIComponent(title || 'Bookmark');
+  const notesEncoded = encodeURIComponent(notes);
+  const thingsUrl = `things:///add?title=${titleEncoded}&notes=${notesEncoded}`;
 
   try {
     await chrome.tabs.create({ url: thingsUrl });

@@ -11,7 +11,7 @@
     "build": "zip -r bookmark-ai.zip manifest.json background.js popup.html popup.js options.html options.js icons/ README.md -x '*.DS_Store'"
   },
   "devDependencies": {
-    "eslint": "^9.15.0",
+    "eslint": "^10.1.0",
     "sharp": "^0.34.5"
   },
   "repository": {
