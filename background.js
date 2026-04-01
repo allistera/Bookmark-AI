@@ -374,8 +374,27 @@ async function addToThings(url, title, summary) {
   }
 }
 
+/**
+ * Checks whether a bookmark with the given URL already exists
+ * @param {string} url
+ * @returns {Promise<chrome.bookmarks.BookmarkTreeNode|null>} The existing bookmark, or null
+ */
+async function findDuplicateBookmark(url) {
+  const results = await chrome.bookmarks.search({ url });
+  return results.length > 0 ? results[0] : null;
+}
+
 async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInstapaperOption, createTodoist, createThings, autoBookmark }) {
   try {
+    // Duplicate detection — check before calling AI
+    const duplicate = await findDuplicateBookmark(url);
+    if (duplicate) {
+      return {
+        success: false,
+        error: `Already bookmarked as "${duplicate.title}".`
+      };
+    }
+
     // Get settings from storage
     const settings = await chrome.storage.sync.get({
       aiProvider: 'anthropic',
