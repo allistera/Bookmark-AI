@@ -9,7 +9,9 @@ const DEFAULT_SETTINGS = {
   instapaperUsername: '',
   instapaperPassword: '',
   todoistApiToken: '',
-  instapaperEnabled: true
+  instapaperEnabled: true,
+  todoistEnabled: false,
+  thingsEnabled: false
 };
 
 let currentProvider = 'anthropic';
