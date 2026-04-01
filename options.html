@@ -380,6 +380,7 @@
         <div class="card-body">
           <div class="provider-tabs">
             <button type="button" class="provider-tab active" data-provider="anthropic">Anthropic Claude</button>
+            <button type="button" class="provider-tab" data-provider="openai">ChatGPT</button>
             <button type="button" class="provider-tab" data-provider="openrouter">OpenRouter</button>
           </div>
 
@@ -398,6 +399,34 @@
                 placeholder="sk-ant-..."
                 autocomplete="off"
               >
+            </div>
+          </div>
+
+          <!-- ChatGPT / OpenAI section -->
+          <div id="openaiSection" style="display: none;">
+            <div class="form-group">
+              <label class="form-label" for="openaiApiKey">API Key</label>
+              <div class="form-hint">
+                Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a>
+              </div>
+              <input
+                type="password"
+                id="openaiApiKey"
+                name="openaiApiKey"
+                class="form-input mono"
+                placeholder="sk-..."
+                autocomplete="off"
+              >
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="openaiModel">Model</label>
+              <select id="openaiModel" name="openaiModel" class="form-input-select">
+                <option value="gpt-4o">GPT-4o</option>
+                <option value="gpt-4o-mini">GPT-4o mini</option>
+                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                <option value="gpt-4">GPT-4</option>
+                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+              </select>
             </div>
           </div>
 

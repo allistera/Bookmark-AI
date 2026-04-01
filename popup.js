@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const settings = await chrome.storage.sync.get({
     aiProvider: 'anthropic',
     anthropicApiKey: '',
+    openaiApiKey: '',
+    openaiModel: 'gpt-4o',
     openrouterApiKey: '',
     openrouterModel: '',
     instapaperUsername: '',
@@ -29,7 +31,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const provider = settings.aiProvider || 'anthropic';
   let configWarning = null;
   if (provider === 'anthropic' && (!settings.anthropicApiKey || settings.anthropicApiKey.trim() === '')) {
-    configWarning = 'API key not configured. Open Settings to add your Anthropic API key.';
+    configWarning = 'API key not configured. Open Settings to add your Providers API key.';
+  } else if (provider === 'openai' && (!settings.openaiApiKey || settings.openaiApiKey.trim() === '')) {
+    configWarning = 'OpenAI API key not configured. Open Settings to add it.';
   } else if (provider === 'openrouter' && (!settings.openrouterApiKey || settings.openrouterApiKey.trim() === '')) {
     configWarning = 'OpenRouter API key not configured. Open Settings to add it.';
   } else if (provider === 'openrouter' && (!settings.openrouterModel || settings.openrouterModel.trim() === '')) {

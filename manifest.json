@@ -11,6 +11,7 @@
   ],
   "host_permissions": [
     "https://api.anthropic.com/*",
+    "https://api.openai.com/*",
     "https://www.instapaper.com/*",
     "https://api.todoist.com/*",
     "https://*/*",

@@ -130,7 +130,40 @@ Please respond in JSON format:
 
   let responseText;
 
-  if (provider === 'openrouter') {
+  if (provider === 'openai') {
+    // OpenAI / ChatGPT API call
+    let response;
+    try {
+      response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${settings.openaiApiKey}`
+        },
+        body: JSON.stringify({
+          model: settings.openaiModel || 'gpt-4o',
+          max_tokens: 1024,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+    } catch (error) {
+      console.error('Error calling OpenAI API:', error);
+      throw new Error(`Failed to call OpenAI API: ${error.message}`);
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('OpenAI API error:', response.status, errorText);
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+    }
+
+    const message = await response.json();
+    responseText = message.choices?.[0]?.message?.content;
+    if (!responseText) {
+      console.error('No content in OpenAI response:', JSON.stringify(message));
+      throw new Error('No content in OpenAI response');
+    }
+  } else if (provider === 'openrouter') {
     // OpenRouter API call (OpenAI-compatible format)
     let response;
     try {
@@ -347,6 +380,8 @@ async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInsta
     const settings = await chrome.storage.sync.get({
       aiProvider: 'anthropic',
       anthropicApiKey: '',
+      openaiApiKey: '',
+      openaiModel: 'gpt-4o',
       openrouterApiKey: '',
       openrouterModel: '',
       instapaperUsername: '',
@@ -357,7 +392,11 @@ async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInsta
     const provider = settings.aiProvider || 'anthropic';
 
     // Validate AI provider credentials are configured
-    if (provider === 'openrouter') {
+    if (provider === 'openai') {
+      if (!settings.openaiApiKey || settings.openaiApiKey.trim() === '') {
+        throw new Error('OpenAI API key not configured. Please configure it in Extension Settings.');
+      }
+    } else if (provider === 'openrouter') {
       if (!settings.openrouterApiKey || settings.openrouterApiKey.trim() === '') {
         throw new Error('OpenRouter API key not configured. Please configure it in Extension Settings.');
       }

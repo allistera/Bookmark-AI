@@ -2,6 +2,8 @@
 const DEFAULT_SETTINGS = {
   aiProvider: 'anthropic',
   anthropicApiKey: '',
+  openaiApiKey: '',
+  openaiModel: 'gpt-4o',
   openrouterApiKey: '',
   openrouterModel: '',
   instapaperUsername: '',
@@ -40,6 +42,7 @@ function updateProviderUI(provider) {
     tab.classList.toggle('active', tab.dataset.provider === provider);
   });
   document.getElementById('anthropicSection').style.display = provider === 'anthropic' ? 'block' : 'none';
+  document.getElementById('openaiSection').style.display = provider === 'openai' ? 'block' : 'none';
   document.getElementById('openrouterSection').style.display = provider === 'openrouter' ? 'block' : 'none';
 }
 
@@ -51,6 +54,8 @@ async function loadSettings() {
     updateProviderUI(currentProvider);
 
     document.getElementById('anthropicApiKey').value = settings.anthropicApiKey;
+    document.getElementById('openaiApiKey').value = settings.openaiApiKey;
+    document.getElementById('openaiModel').value = settings.openaiModel || 'gpt-4o';
     document.getElementById('openrouterApiKey').value = settings.openrouterApiKey;
     document.getElementById('instapaperUsername').value = settings.instapaperUsername;
     document.getElementById('instapaperPassword').value = settings.instapaperPassword;
@@ -128,6 +133,8 @@ async function saveSettings(event) {
   event.preventDefault();
 
   const anthropicApiKey = document.getElementById('anthropicApiKey').value.trim();
+  const openaiApiKey = document.getElementById('openaiApiKey').value.trim();
+  const openaiModel = document.getElementById('openaiModel').value;
   const openrouterApiKey = document.getElementById('openrouterApiKey').value.trim();
   const openrouterModel = document.getElementById('openrouterModel').value;
   const instapaperUsername = document.getElementById('instapaperUsername').value.trim();
@@ -142,6 +149,15 @@ async function saveSettings(event) {
     }
     if (!anthropicApiKey.startsWith('sk-ant-')) {
       showStatus('Anthropic API key should start with "sk-ant-"', 'error');
+      return;
+    }
+  } else if (currentProvider === 'openai') {
+    if (!openaiApiKey) {
+      showStatus('Please enter your OpenAI API key', 'error');
+      return;
+    }
+    if (!openaiApiKey.startsWith('sk-')) {
+      showStatus('OpenAI API key should start with "sk-"', 'error');
       return;
     }
   } else if (currentProvider === 'openrouter') {
@@ -163,6 +179,8 @@ async function saveSettings(event) {
     await chrome.storage.sync.set({
       aiProvider: currentProvider,
       anthropicApiKey,
+      openaiApiKey,
+      openaiModel,
       openrouterApiKey,
       openrouterModel,
       instapaperUsername,
