@@ -79,6 +79,8 @@ jobs:
             options.js \
             health-check.html \
             health-check.js \
+            search.html \
+            search.js \
             icons/ \
             README.md \
             -x '*.DS_Store'
