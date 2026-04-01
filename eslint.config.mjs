@@ -16,8 +16,19 @@ export default [
         URLSearchParams: 'readonly',
         btoa: 'readonly',
         setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        AbortController: 'readonly',
+        confirm: 'readonly',
+        alert: 'readonly',
         importScripts: 'readonly',
-        DOMParser: 'readonly'
+        DOMParser: 'readonly',
+        Promise: 'readonly',
+        Date: 'readonly',
+        Math: 'readonly',
+        JSON: 'readonly',
+        parseInt: 'readonly'
       }
     },
     rules: {

@@ -1,12 +1,54 @@
 const USER_AGENT = 'Mozilla/5.0 (compatible; Bookmark-AI/1.0)';
 
-// Listen for messages from popup
+// Listen for messages from popup and health-check page
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'analyzeBookmark') {
     handleAnalyzeBookmark(request)
       .then(sendResponse)
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true; // Keep channel open for async response
+  }
+
+  if (request.action === 'runHealthCheck') {
+    runHealthCheck()
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  if (request.action === 'getHealthCheckData') {
+    chrome.storage.local.get(['healthCheckResults', 'healthCheckProgress'])
+      .then(data => sendResponse(data))
+      .catch(error => sendResponse({ error: error.message }));
+    return true;
+  }
+
+  if (request.action === 'applyHealthFix') {
+    applyHealthFix(request.bookmarkId, request.fixType, request.newValue)
+      .then(sendResponse)
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  if (request.action === 'applyBulkFix') {
+    applyBulkFix(request.fixType, request.ids)
+      .then(sendResponse)
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  if (request.action === 'dismissHealthIssue') {
+    dismissHealthIssue(request.bookmarkId)
+      .then(sendResponse)
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  if (request.action === 'setupHealthCheckAlarm') {
+    setupHealthCheckAlarm()
+      .then(() => sendResponse({ success: true }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
   }
 });
 
@@ -585,6 +627,8 @@ chrome.runtime.onInstalled.addListener(() => {
     title: 'Analyze and Bookmark with AI',
     contexts: ['page']
   });
+  // Set up health check alarm based on saved settings
+  setupHealthCheckAlarm().catch(console.error);
 });
 
 // Handle context menu clicks
@@ -594,3 +638,339 @@ chrome.contextMenus.onClicked.addListener(async (info, _tab) => {
     chrome.action.openPopup();
   }
 });
+
+// Run periodic health check when alarm fires
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'bookmarkHealthCheck') {
+    runHealthCheck().catch(console.error);
+  }
+});
+
+// ============================================================
+// Health Check
+// ============================================================
+
+/**
+ * Collects all bookmark leaf nodes (those with URLs) from the entire tree.
+ * @returns {Promise<chrome.bookmarks.BookmarkTreeNode[]>}
+ */
+async function getAllBookmarks() {
+  const tree = await chrome.bookmarks.getTree();
+  const bookmarks = [];
+
+  function traverse(nodes) {
+    for (const node of nodes) {
+      if (node.url) {
+        bookmarks.push(node);
+      } else if (node.children) {
+        traverse(node.children);
+      }
+    }
+  }
+
+  traverse(tree);
+  return bookmarks;
+}
+
+/**
+ * Extracts the page title from raw HTML.
+ * Prefers og:title, falls back to twitter:title, then <title>.
+ * @param {string} html
+ * @returns {string|null}
+ */
+function extractTitleFromHtml(html) {
+  // og:title (attribute order varies)
+  const og = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)
+    || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i);
+  if (og) return og[1].trim();
+
+  // twitter:title
+  const tw = html.match(/<meta[^>]+name=["']twitter:title["'][^>]+content=["']([^"']+)["']/i)
+    || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:title["']/i);
+  if (tw) return tw[1].trim();
+
+  // <title> tag
+  const t = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+  if (t) return t[1].trim();
+
+  return null;
+}
+
+/**
+ * Normalizes a URL for redirect comparison (removes fragment and trailing slash).
+ * @param {string} url
+ * @returns {string}
+ */
+function normalizeUrlForComparison(url) {
+  try {
+    const u = new URL(url);
+    u.hash = '';
+    if (u.pathname !== '/') u.pathname = u.pathname.replace(/\/$/, '');
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * Checks a single bookmark for all health issues: dead link, redirect,
+ * title change, stale, and domain gone.
+ * @param {chrome.bookmarks.BookmarkTreeNode} bookmark
+ * @param {number} staleDays
+ * @returns {Promise<object>}
+ */
+async function checkSingleBookmark(bookmark, staleDays) {
+  const issues = [];
+  let newUrl = null;
+  let newTitle = null;
+  let statusCode = null;
+
+  const TIMEOUT_MS = 12000;
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+    const response = await fetch(bookmark.url, {
+      method: 'GET',
+      redirect: 'follow',
+      signal: controller.signal,
+      headers: { 'User-Agent': USER_AGENT }
+    });
+    clearTimeout(timer);
+
+    statusCode = response.status;
+
+    if (statusCode === 404 || statusCode === 410) {
+      issues.push('dead');
+    } else if (statusCode >= 400) {
+      issues.push('dead');
+    } else {
+      // Check for redirect: compare final URL to original
+      const finalUrl = response.url;
+      if (finalUrl && normalizeUrlForComparison(finalUrl) !== normalizeUrlForComparison(bookmark.url)) {
+        issues.push('redirect');
+        newUrl = finalUrl;
+      }
+
+      // Extract title from HTML for pages that return HTML
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('text/html')) {
+        const html = (await response.text()).substring(0, 50000);
+        const liveTitle = extractTitleFromHtml(html);
+        if (liveTitle && liveTitle !== bookmark.title) {
+          newTitle = liveTitle;
+          issues.push('title_changed');
+        }
+      }
+    }
+  } catch {
+    issues.push('domain_gone');
+    statusCode = 0;
+  }
+
+  // Staleness: use dateLastUsed if available, else dateAdded
+  const cutoffMs = staleDays * 24 * 60 * 60 * 1000;
+  const lastActivity = bookmark.dateLastUsed || bookmark.dateAdded || 0;
+  if (lastActivity && (Date.now() - lastActivity) > cutoffMs) {
+    issues.push('stale');
+  }
+
+  // Primary status: most actionable issue
+  let status = 'ok';
+  if (issues.includes('domain_gone')) status = 'domain_gone';
+  else if (issues.includes('dead')) status = 'dead';
+  else if (issues.includes('redirect')) status = 'redirect';
+  else if (issues.includes('stale') && issues.length === 1) status = 'stale';
+  else if (issues.length > 0) status = issues[0];
+
+  return {
+    id: bookmark.id,
+    url: bookmark.url,
+    title: bookmark.title,
+    dateAdded: bookmark.dateAdded,
+    dateLastUsed: bookmark.dateLastUsed || null,
+    status,
+    issues,
+    newUrl,
+    newTitle,
+    statusCode,
+    checkedAt: new Date().toISOString(),
+    dismissed: false,
+    fixed: false
+  };
+}
+
+/**
+ * Runs a full health check on all bookmarks, processing in batches.
+ * Stores progress and results in chrome.storage.local.
+ * @returns {Promise<{ success: boolean, summary: object }>}
+ */
+async function runHealthCheck() {
+  const settings = await chrome.storage.sync.get({ healthCheckStaleDays: 365 });
+  const staleDays = settings.healthCheckStaleDays;
+
+  const bookmarks = await getAllBookmarks();
+  const total = bookmarks.length;
+
+  await chrome.storage.local.set({
+    healthCheckProgress: { inProgress: true, current: 0, total }
+  });
+
+  const results = [];
+  const BATCH_SIZE = 5;
+
+  for (let i = 0; i < bookmarks.length; i += BATCH_SIZE) {
+    const batch = bookmarks.slice(i, i + BATCH_SIZE);
+    const batchResults = await Promise.all(batch.map(bm => checkSingleBookmark(bm, staleDays)));
+    results.push(...batchResults);
+
+    const current = Math.min(i + BATCH_SIZE, total);
+    await chrome.storage.local.set({
+      healthCheckProgress: { inProgress: true, current, total }
+    });
+
+    // Brief pause between batches to avoid overwhelming remote servers
+    if (i + BATCH_SIZE < bookmarks.length) {
+      await new Promise(resolve => setTimeout(resolve, 150));
+    }
+  }
+
+  const summary = {
+    total: results.length,
+    dead: results.filter(r => r.issues.includes('dead')).length,
+    domainGone: results.filter(r => r.issues.includes('domain_gone')).length,
+    redirected: results.filter(r => r.issues.includes('redirect')).length,
+    stale: results.filter(r => r.issues.includes('stale')).length,
+    titleChanged: results.filter(r => r.issues.includes('title_changed')).length,
+    ok: results.filter(r => r.issues.length === 0).length
+  };
+
+  await chrome.storage.local.set({
+    healthCheckResults: { lastRun: new Date().toISOString(), results, summary },
+    healthCheckProgress: { inProgress: false, current: total, total }
+  });
+
+  return { success: true, summary };
+}
+
+/**
+ * Applies a fix action to a single bookmark and updates stored results.
+ * @param {string} bookmarkId
+ * @param {'updateUrl'|'updateTitle'|'delete'} fixType
+ * @param {string} [newValue]
+ */
+async function applyHealthFix(bookmarkId, fixType, newValue) {
+  try {
+    if (fixType === 'updateUrl') {
+      await chrome.bookmarks.update(bookmarkId, { url: newValue });
+    } else if (fixType === 'updateTitle') {
+      await chrome.bookmarks.update(bookmarkId, { title: newValue });
+    } else if (fixType === 'delete') {
+      await chrome.bookmarks.remove(bookmarkId);
+    }
+
+    // Reflect the fix in stored results
+    const stored = await chrome.storage.local.get('healthCheckResults');
+    if (stored.healthCheckResults) {
+      const { results } = stored.healthCheckResults;
+      const idx = results.findIndex(r => r.id === bookmarkId);
+      if (idx >= 0) {
+        if (fixType === 'delete') {
+          results.splice(idx, 1);
+          stored.healthCheckResults.summary.total = Math.max(0, stored.healthCheckResults.summary.total - 1);
+        } else {
+          results[idx].fixed = true;
+          if (fixType === 'updateUrl') results[idx].url = newValue;
+          if (fixType === 'updateTitle') results[idx].title = newValue;
+        }
+        await chrome.storage.local.set({ healthCheckResults: stored.healthCheckResults });
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Applies a bulk fix to multiple bookmarks of a specific issue type.
+ * @param {'deleteAllDead'|'fixAllRedirects'|'dismissAllStale'} fixType
+ * @param {string[]} ids
+ */
+async function applyBulkFix(fixType, ids) {
+  const stored = await chrome.storage.local.get('healthCheckResults');
+  if (!stored.healthCheckResults) return { success: true };
+
+  const { results } = stored.healthCheckResults;
+  let modified = false;
+
+  for (const id of ids) {
+    try {
+      if (fixType === 'deleteAllDead') {
+        await chrome.bookmarks.remove(id);
+        const idx = results.findIndex(r => r.id === id);
+        if (idx >= 0) { results.splice(idx, 1); modified = true; }
+      } else if (fixType === 'fixAllRedirects') {
+        const entry = results.find(r => r.id === id);
+        if (entry && entry.newUrl) {
+          await chrome.bookmarks.update(id, { url: entry.newUrl });
+          entry.fixed = true;
+          entry.url = entry.newUrl;
+          modified = true;
+        }
+      } else if (fixType === 'dismissAllStale') {
+        const entry = results.find(r => r.id === id);
+        if (entry) { entry.dismissed = true; modified = true; }
+      }
+    } catch (err) {
+      console.error(`Bulk fix failed for bookmark ${id}:`, err);
+    }
+  }
+
+  if (modified) {
+    stored.healthCheckResults.summary.total = results.length;
+    await chrome.storage.local.set({ healthCheckResults: stored.healthCheckResults });
+  }
+
+  return { success: true };
+}
+
+/**
+ * Dismisses a health check issue for a single bookmark without deleting it.
+ * @param {string} bookmarkId
+ */
+async function dismissHealthIssue(bookmarkId) {
+  const stored = await chrome.storage.local.get('healthCheckResults');
+  if (stored.healthCheckResults) {
+    const idx = stored.healthCheckResults.results.findIndex(r => r.id === bookmarkId);
+    if (idx >= 0) {
+      stored.healthCheckResults.results[idx].dismissed = true;
+      await chrome.storage.local.set({ healthCheckResults: stored.healthCheckResults });
+    }
+  }
+  return { success: true };
+}
+
+/**
+ * Sets up (or clears) the periodic health-check alarm based on stored settings.
+ */
+async function setupHealthCheckAlarm() {
+  await chrome.alarms.clear('bookmarkHealthCheck');
+
+  const settings = await chrome.storage.sync.get({
+    healthCheckEnabled: false,
+    healthCheckInterval: 'weekly'
+  });
+
+  if (!settings.healthCheckEnabled) return;
+
+  const intervalMinutes = {
+    daily: 1440,
+    weekly: 10080,
+    monthly: 43200
+  }[settings.healthCheckInterval] || 10080;
+
+  chrome.alarms.create('bookmarkHealthCheck', { periodInMinutes: intervalMinutes });
+}

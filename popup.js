@@ -86,6 +86,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     e.preventDefault();
     chrome.runtime.openOptionsPage();
   });
+
+  document.getElementById('healthCheckLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    chrome.tabs.create({ url: chrome.runtime.getURL('health-check.html') });
+  });
 });
 
 async function analyzeAndBookmark() {
