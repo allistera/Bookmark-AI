@@ -20,9 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     instapaperUsername: '',
     instapaperPassword: '',
     todoistApiToken: '',
-    instapaperEnabled: true,
-    todoistEnabled: true,
-    thingsEnabled: true
+    instapaperEnabled: true
   });
 
   function isMacOrIOS() {

@@ -9,9 +9,7 @@ const DEFAULT_SETTINGS = {
   instapaperUsername: '',
   instapaperPassword: '',
   todoistApiToken: '',
-  instapaperEnabled: true,
-  todoistEnabled: true,
-  thingsEnabled: true
+  instapaperEnabled: true
 };
 
 let currentProvider = 'anthropic';
@@ -201,7 +199,7 @@ async function saveSettings(event) {
 
 async function resetSettings() {
   try {
-    await chrome.storage.sync.set(DEFAULT_SETTINGS);
+    await chrome.storage.sync.set({ ...DEFAULT_SETTINGS, todoistEnabled: false, thingsEnabled: false });
     await loadSettings();
     showStatus('Settings reset to default', 'success');
     setTimeout(hideStatus, 3000);
