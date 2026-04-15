@@ -84,6 +84,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     chrome.tabs.create({ url: chrome.runtime.getURL('inbox.html') });
   });
 
+  document.getElementById('benchmarkLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    chrome.tabs.create({ url: chrome.runtime.getURL('benchmark.html') });
+  });
+
   document.getElementById('healthCheckLink').addEventListener('click', (e) => {
     e.preventDefault();
     chrome.tabs.create({ url: chrome.runtime.getURL('health-check.html') });
