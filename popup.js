@@ -56,65 +56,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('analyzeBtn').disabled = true;
   }
 
-  // Only show Instapaper option if enabled in settings and credentials are set
-  const instapaperRow = document.getElementById('saveToInstapaperRow');
-  if (instapaperRow) {
-    if (settings.instapaperEnabled !== false && settings.instapaperUsername?.trim() && settings.instapaperPassword) {
-      instapaperRow.style.display = '';
-    } else {
-      instapaperRow.style.display = 'none';
-      const instapaperCheckbox = document.getElementById('saveToInstapaper');
-      if (instapaperCheckbox) instapaperCheckbox.checked = false;
-    }
-  }
-
-  // Only show Todoist option if enabled in settings and token is set
-  const todoistRow = document.getElementById('createTodoistRow');
-  if (todoistRow) {
-    if (settings.todoistEnabled !== false && settings.todoistApiToken?.trim()) {
-      todoistRow.style.display = '';
-    } else {
-      todoistRow.style.display = 'none';
-      const todoistCheckbox = document.getElementById('createTodoist');
-      if (todoistCheckbox) todoistCheckbox.checked = false;
-    }
-  }
-
-  // Only show Things option if enabled in settings and on Mac/iOS (where Things app runs)
-  const thingsRow = document.getElementById('createThingsRow');
-  if (thingsRow) {
-    if (settings.thingsEnabled !== false && isMacOrIOS()) {
-      thingsRow.style.display = '';
-    } else {
-      thingsRow.style.display = 'none';
-      const thingsCheckbox = document.getElementById('createThings');
-      if (thingsCheckbox) thingsCheckbox.checked = false;
-    }
-  }
-
-  // Only show Readwise option if enabled and token is set
-  const readwiseRow = document.getElementById('saveToReadwiseRow');
-  if (readwiseRow) {
-    if (settings.readwiseEnabled && settings.readwiseAccessToken?.trim()) {
-      readwiseRow.style.display = '';
-    } else {
-      readwiseRow.style.display = 'none';
-      const readwiseCheckbox = document.getElementById('saveToReadwise');
-      if (readwiseCheckbox) readwiseCheckbox.checked = false;
-    }
-  }
-
-  // Only show Raindrop option if enabled and token is set
-  const raindropRow = document.getElementById('saveToRaindropRow');
-  if (raindropRow) {
-    if (settings.raindropEnabled && settings.raindropAccessToken?.trim()) {
-      raindropRow.style.display = '';
-    } else {
-      raindropRow.style.display = 'none';
-      const raindropCheckbox = document.getElementById('saveToRaindrop');
-      if (raindropCheckbox) raindropCheckbox.checked = false;
-    }
-  }
+  toggleIntegrationRow('saveToInstapaperRow', 'saveToInstapaper',
+    settings.instapaperEnabled !== false && settings.instapaperUsername?.trim() && settings.instapaperPassword);
+  toggleIntegrationRow('createTodoistRow', 'createTodoist',
+    settings.todoistEnabled !== false && settings.todoistApiToken?.trim());
+  toggleIntegrationRow('createThingsRow', 'createThings',
+    settings.thingsEnabled !== false && isMacOrIOS());
+  toggleIntegrationRow('saveToReadwiseRow', 'saveToReadwise',
+    settings.readwiseEnabled && settings.readwiseAccessToken?.trim());
+  toggleIntegrationRow('saveToRaindropRow', 'saveToRaindrop',
+    settings.raindropEnabled && settings.raindropAccessToken?.trim());
 
   document.getElementById('analyzeBtn').addEventListener('click', analyzeAndBookmark);
   document.getElementById('cancelBtn').addEventListener('click', () => window.close());
@@ -257,50 +208,44 @@ function displayResults(data) {
   }
 
   if (data.todoist) {
-    const el = document.getElementById('todoistStatus');
-    el.textContent = '';
-    const dot = document.createElement('span');
-    dot.className = `dot ${data.todoist.created ? 'success' : 'error'}`;
-    el.appendChild(dot);
-
-    const text = document.createTextNode(data.todoist.created ? 'Task created' : 'Not created');
-    el.appendChild(text);
-
-    document.getElementById('todoistContainer').style.display = 'block';
+    renderIntegrationStatus('todoistStatus', 'todoistContainer',
+      data.todoist.created, 'Task created', data.todoist.error || 'Not created');
   }
 
   if (data.things) {
-    const el = document.getElementById('thingsStatus');
-    el.textContent = '';
-    const dot = document.createElement('span');
-    dot.className = `dot ${data.things.opened ? 'success' : 'error'}`;
-    el.appendChild(dot);
-
-    const text = document.createTextNode(data.things.opened ? 'Opened in Things' : (data.things.error || 'Not opened'));
-    el.appendChild(text);
-
-    document.getElementById('thingsContainer').style.display = 'block';
+    renderIntegrationStatus('thingsStatus', 'thingsContainer',
+      data.things.opened, 'Opened in Things', data.things.error || 'Not opened');
   }
 
   if (data.readwise) {
-    const el = document.getElementById('readwiseStatus');
-    el.textContent = '';
-    const dot = document.createElement('span');
-    dot.className = `dot ${data.readwise.saved ? 'success' : 'error'}`;
-    el.appendChild(dot);
-    el.appendChild(document.createTextNode(data.readwise.saved ? 'Saved' : (data.readwise.error || 'Not saved')));
-    document.getElementById('readwiseContainer').style.display = 'block';
+    renderIntegrationStatus('readwiseStatus', 'readwiseContainer',
+      data.readwise.saved, 'Saved', data.readwise.error || 'Not saved');
   }
 
   if (data.raindrop) {
-    const el = document.getElementById('raindropStatus');
-    el.textContent = '';
-    const dot = document.createElement('span');
-    dot.className = `dot ${data.raindrop.saved ? 'success' : 'error'}`;
-    el.appendChild(dot);
-    el.appendChild(document.createTextNode(data.raindrop.saved ? 'Saved' : (data.raindrop.error || 'Not saved')));
-    document.getElementById('raindropContainer').style.display = 'block';
+    renderIntegrationStatus('raindropStatus', 'raindropContainer',
+      data.raindrop.saved, 'Saved', data.raindrop.error || 'Not saved');
   }
+}
+
+function toggleIntegrationRow(rowId, checkboxId, visible) {
+  const row = document.getElementById(rowId);
+  if (!row) return;
+  row.style.display = visible ? '' : 'none';
+  if (!visible) {
+    const checkbox = document.getElementById(checkboxId);
+    if (checkbox) checkbox.checked = false;
+  }
+}
+
+function renderIntegrationStatus(statusId, containerId, success, successText, failText) {
+  const el = document.getElementById(statusId);
+  el.textContent = '';
+  const dot = document.createElement('span');
+  dot.className = `dot ${success ? 'success' : 'error'}`;
+  el.appendChild(dot);
+  el.appendChild(document.createTextNode(success ? successText : failText));
+  document.getElementById(containerId).style.display = 'block';
 }
 
 function showUndoButton(bookmarkId) {
@@ -327,6 +272,8 @@ function showUndoButton(bookmarkId) {
     }
     updateLabel();
   }, 1000);
+
+  window.addEventListener('pagehide', () => clearInterval(interval), { once: true });
 
   btn.addEventListener('click', async () => {
     clearInterval(interval);

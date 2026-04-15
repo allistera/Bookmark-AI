@@ -583,45 +583,24 @@ async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInsta
       ? { isArticle: false, contentType: 'page', title: title || url, summary: '', categories: [], matchedCategory: ruleFolder }
       : await analyzeBookmark(url, settings, provider, title);
 
-    // Save to Instapaper if requested, it's an article, and credentials are configured
-    let instapaperResult = null;
-    if (saveToInstapaperOption && analysis.isArticle && settings.instapaperUsername && settings.instapaperPassword) {
-      instapaperResult = await saveToInstapaper(
-        url,
-        analysis.title,
-        settings.instapaperUsername,
-        settings.instapaperPassword
-      );
-    }
-
-    // Create Todoist task if requested and API token is configured
-    let todoistResult = null;
-    if (createTodoist && settings.todoistApiToken) {
-      todoistResult = await createTodoistTask(
-        url,
-        analysis.title,
-        analysis.summary,
-        settings.todoistApiToken
-      );
-    }
-
-    // Add to Things if requested (opens things:// URL; no token required)
-    let thingsResult = null;
-    if (createThings) {
-      thingsResult = await addToThings(url, analysis.title, analysis.summary);
-    }
-
-    // Save to Readwise if requested and token is configured
-    let readwiseResult = null;
-    if (saveToReadwiseOption && settings.readwiseEnabled && settings.readwiseAccessToken) {
-      readwiseResult = await saveToReadwise(url, analysis.title, settings.readwiseAccessToken);
-    }
-
-    // Save to Raindrop.io if requested and token is configured
-    let raindropResult = null;
-    if (saveToRaindropOption && settings.raindropEnabled && settings.raindropAccessToken) {
-      raindropResult = await saveToRaindrop(url, analysis.title, analysis.categories, settings.raindropAccessToken);
-    }
+    // Fire all integrations concurrently — they are fully independent
+    const [instapaperResult, todoistResult, thingsResult, readwiseResult, raindropResult] = await Promise.all([
+      (saveToInstapaperOption && analysis.isArticle && settings.instapaperUsername && settings.instapaperPassword)
+        ? saveToInstapaper(url, analysis.title, settings.instapaperUsername, settings.instapaperPassword)
+        : null,
+      (createTodoist && settings.todoistApiToken)
+        ? createTodoistTask(url, analysis.title, analysis.summary, settings.todoistApiToken)
+        : null,
+      createThings
+        ? addToThings(url, analysis.title, analysis.summary)
+        : null,
+      (saveToReadwiseOption && settings.readwiseEnabled && settings.readwiseAccessToken)
+        ? saveToReadwise(url, analysis.title, settings.readwiseAccessToken)
+        : null,
+      (saveToRaindropOption && settings.raindropEnabled && settings.raindropAccessToken)
+        ? saveToRaindrop(url, analysis.title, analysis.categories, settings.raindropAccessToken)
+        : null
+    ]);
 
     let bookmarkCreated = false;
     let bookmarkId = null;
