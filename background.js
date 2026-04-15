@@ -85,6 +85,34 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
   }
+
+  if (request.action === 'getUnsortedBookmarks') {
+    getUnsortedBookmarks()
+      .then(bookmarks => sendResponse({ success: true, bookmarks }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  if (request.action === 'getAISuggestion') {
+    handleGetAISuggestion(request)
+      .then(sendResponse)
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  if (request.action === 'moveBookmark') {
+    handleMoveBookmark(request)
+      .then(sendResponse)
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  if (request.action === 'runBenchmark') {
+    handleRunBenchmark(request)
+      .then(sendResponse)
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
 });
 
 /**
@@ -728,6 +756,95 @@ function matchesDomainRule(url, rules) {
     // invalid URL, skip rule matching
   }
   return null;
+}
+
+/**
+ * Returns all bookmarks sitting directly on the Bookmarks Bar or Other
+ * Bookmarks (i.e. not inside any subfolder). These are the "unsorted" ones.
+ */
+async function getUnsortedBookmarks() {
+  const [bar, other] = await Promise.all([
+    chrome.bookmarks.getChildren('1'),
+    chrome.bookmarks.getChildren('2')
+  ]);
+  return [...bar, ...other].filter(b => b.url);
+}
+
+async function handleGetAISuggestion({ url, title }) {
+  const settings = await chrome.storage.sync.get({
+    aiProvider: 'anthropic',
+    anthropicApiKey: '',
+    openaiApiKey: '',
+    openaiModel: 'gpt-4o',
+    openrouterApiKey: '',
+    openrouterModel: '',
+    domainRules: []
+  });
+  const provider = settings.aiProvider || 'anthropic';
+  const ruleFolder = matchesDomainRule(url, settings.domainRules || []);
+  if (ruleFolder) {
+    return { success: true, matchedCategory: ruleFolder };
+  }
+  const analysis = await analyzeBookmark(url, settings, provider, title);
+  return {
+    success: true,
+    matchedCategory: analysis.matchedCategory || 'Other',
+    isArticle: analysis.isArticle,
+    contentType: analysis.contentType
+  };
+}
+
+async function handleMoveBookmark({ bookmarkId, categoryPath }) {
+  const categories = categoryPath.split('/').filter(c => c.trim().length > 0);
+  let currentParentId = '1';
+  for (const category of categories) {
+    const folder = await getOrCreateFolder(category, currentParentId);
+    currentParentId = folder.id;
+  }
+  await chrome.bookmarks.move(bookmarkId, { parentId: currentParentId });
+  return { success: true };
+}
+
+async function handleRunBenchmark({ url, title }) {
+  const settings = await chrome.storage.sync.get({
+    aiProvider: 'anthropic',
+    anthropicApiKey: '',
+    openaiApiKey: '',
+    openaiModel: 'gpt-4o',
+    openrouterApiKey: '',
+    openrouterModel: '',
+    domainRules: []
+  });
+  const providers = [];
+  if (settings.anthropicApiKey?.trim()) {
+    providers.push({ label: 'Claude Haiku', provider: 'anthropic' });
+  }
+  if (settings.openaiApiKey?.trim()) {
+    providers.push({ label: settings.openaiModel || 'GPT-4o', provider: 'openai' });
+  }
+  if (settings.openrouterApiKey?.trim() && settings.openrouterModel) {
+    providers.push({ label: settings.openrouterModel, provider: 'openrouter' });
+  }
+  if (providers.length === 0) {
+    return { success: false, error: 'No AI providers configured. Add API keys in Settings.' };
+  }
+  const results = await Promise.all(providers.map(async ({ label, provider }) => {
+    const start = Date.now();
+    try {
+      const analysis = await analyzeBookmark(url, settings, provider, title);
+      return {
+        label,
+        matchedCategory: analysis.isArticle ? 'Article' : (analysis.matchedCategory || 'Other'),
+        contentType: analysis.contentType,
+        isArticle: analysis.isArticle,
+        latencyMs: Date.now() - start,
+        success: true
+      };
+    } catch (error) {
+      return { label, error: error.message, latencyMs: Date.now() - start, success: false };
+    }
+  }));
+  return { success: true, results };
 }
 
 /**

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bookmark Inbox – Bookmark AI</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 13px;
+      color: #202124;
+      background: #f8f9fa;
+      line-height: 1.5;
+    }
+
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 24px 60px;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      gap: 16px;
+    }
+
+    .page-header h1 { font-size: 22px; font-weight: 400; color: #202124; margin-bottom: 6px; }
+    .page-header p  { font-size: 13px; color: #5f6368; }
+
+    .header-actions { display: flex; gap: 8px; flex-shrink: 0; align-items: center; }
+
+    .btn {
+      padding: 9px 20px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      font-family: inherit;
+      transition: background 0.1s;
+      white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary  { background: #1a73e8; color: #fff; }
+    .btn-primary:not(:disabled):hover  { background: #1557b0; }
+    .btn-secondary { background: #fff; color: #1a73e8; border: 1px solid #dadce0; }
+    .btn-secondary:not(:disabled):hover { background: #f8f9fa; border-color: #1a73e8; }
+
+    .alert {
+      padding: 14px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+    .alert-info    { background: #e8f0fe; color: #1967d2; }
+    .alert-success { background: #e6f4ea; color: #137333; }
+    .alert-error   { background: #fce8e6; color: #c5221f; }
+    .alert-loading { background: #e8f0fe; color: #1967d2; }
+
+    .card {
+      background: #fff;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    thead th {
+      padding: 10px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #5f6368;
+      background: #f8f9fa;
+      border-bottom: 1px solid #dadce0;
+      text-align: left;
+    }
+
+    thead th:first-child { width: 36px; text-align: center; }
+    thead th:last-child  { width: 110px; }
+
+    tbody tr { border-bottom: 1px solid #f1f3f4; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #fafafa; }
+
+    td { padding: 10px 14px; vertical-align: top; }
+    td:first-child { text-align: center; padding-top: 13px; }
+
+    .bm-title a { color: #202124; text-decoration: none; font-weight: 500; }
+    .bm-title a:hover { text-decoration: underline; color: #1a73e8; }
+    .bm-url {
+      font-size: 11px;
+      color: #80868b;
+      margin-top: 2px;
+      max-width: 380px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .suggestion {
+      font-family: 'Roboto Mono', monospace;
+      font-size: 12px;
+      color: #1967d2;
+      background: #e8f0fe;
+      padding: 2px 7px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+    .suggestion-edit {
+      width: 100%;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 12px;
+      padding: 3px 7px;
+      border: 1px solid #1a73e8;
+      border-radius: 3px;
+      color: #202124;
+      background: #fff;
+    }
+    .suggestion-edit:focus { outline: none; box-shadow: 0 0 0 2px rgba(26,115,232,.2); }
+
+    .row-status { font-size: 12px; }
+    .row-status.ready    { color: #5f6368; }
+    .row-status.analyzing{ color: #1967d2; }
+    .row-status.moving   { color: #b06000; }
+    .row-status.done     { color: #137333; font-weight: 500; }
+    .row-status.error    { color: #c5221f; }
+
+    .empty-state {
+      padding: 48px 24px;
+      text-align: center;
+      color: #5f6368;
+    }
+    .empty-state svg { margin-bottom: 12px; opacity: 0.4; }
+    .empty-state p { font-size: 15px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="page-header">
+      <div>
+        <h1>Bookmark Inbox</h1>
+        <p>Bookmarks sitting directly on your Bookmarks Bar or Other Bookmarks, not in any folder.</p>
+      </div>
+      <div class="header-actions">
+        <button id="analyzeBtn" class="btn btn-primary" disabled>Analyze All</button>
+        <button id="applyBtn"   class="btn btn-secondary" style="display:none">Move Selected (0)</button>
+      </div>
+    </div>
+
+    <div id="alertBox" class="alert alert-loading">Scanning for unsorted bookmarks…</div>
+
+    <div id="tableCard" class="card" style="display:none">
+      <table>
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="selectAll" title="Select all"></th>
+            <th>Bookmark</th>
+            <th>Suggested Folder</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="bookmarkRows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="inbox.js"></script>
+</body>
+</html>
