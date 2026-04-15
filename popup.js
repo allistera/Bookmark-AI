@@ -131,6 +131,9 @@ async function analyzeAndBookmark() {
       displayResults(response.data);
       if (autoBookmark && response.data.bookmarkCreated) {
         showStatus('Saved to ' + response.data.matchedCategory, 'success');
+        if (response.data.chromeBookmarkId) {
+          showUndoButton(response.data.chromeBookmarkId);
+        }
       } else if (saveToInstapaper && response.data.isArticle && response.data.instapaper?.saved) {
         showStatus('Article saved to Instapaper', 'success');
       } else {
@@ -246,4 +249,46 @@ function displayResults(data) {
 
     document.getElementById('thingsContainer').style.display = 'block';
   }
+}
+
+function showUndoButton(bookmarkId) {
+  const container = document.getElementById('statusContainer');
+  const undoDiv = document.createElement('div');
+  undoDiv.style.cssText = 'padding: 4px 12px 0; text-align: right;';
+
+  const btn = document.createElement('button');
+  btn.style.cssText = 'background: none; border: none; color: #1a73e8; font-size: 12px; font-weight: 500; cursor: pointer; padding: 4px 0; font-family: inherit;';
+
+  let secondsLeft = 7;
+  const updateLabel = () => { btn.textContent = `Undo (${secondsLeft}s)`; };
+  updateLabel();
+
+  undoDiv.appendChild(btn);
+  container.appendChild(undoDiv);
+
+  const interval = setInterval(() => {
+    secondsLeft--;
+    if (secondsLeft <= 0) {
+      clearInterval(interval);
+      undoDiv.remove();
+      return;
+    }
+    updateLabel();
+  }, 1000);
+
+  btn.addEventListener('click', async () => {
+    clearInterval(interval);
+    undoDiv.remove();
+    try {
+      const response = await chrome.runtime.sendMessage({ action: 'undoBookmark', bookmarkId });
+      if (response.success) {
+        showStatus('Bookmark removed', 'success');
+        document.getElementById('results').classList.remove('visible');
+      } else {
+        showStatus('Could not undo: ' + response.error, 'error');
+      }
+    } catch (error) {
+      showStatus('Could not undo: ' + error.message, 'error');
+    }
+  });
 }

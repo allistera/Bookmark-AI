@@ -78,6 +78,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch(() => sendResponse({ hasAI: false }));
     return true;
   }
+
+  if (request.action === 'undoBookmark') {
+    chrome.bookmarks.remove(request.bookmarkId)
+      .then(() => sendResponse({ success: true }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
 });
 
 /**
