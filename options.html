@@ -599,6 +599,66 @@
 
       <div class="card">
         <div class="card-header">
+          <span class="card-title">Readwise</span>
+          <span class="badge optional">Optional</span>
+        </div>
+        <div class="card-body">
+          <div class="form-group form-group-inline">
+            <label class="toggle-label">
+              <input type="checkbox" id="readwiseEnabled" name="readwiseEnabled">
+              <span>Enable Readwise</span>
+            </label>
+          </div>
+          <div class="form-hint" style="margin-bottom: 16px;">
+            Save bookmarks to Readwise Reader. Get your access token from
+            <a href="https://readwise.io/access_token" target="_blank">readwise.io/access_token</a>.
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="readwiseAccessToken">Access Token</label>
+            <input
+              type="password"
+              id="readwiseAccessToken"
+              name="readwiseAccessToken"
+              class="form-input mono"
+              placeholder="Your Readwise access token"
+              autocomplete="off"
+            >
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Raindrop.io</span>
+          <span class="badge optional">Optional</span>
+        </div>
+        <div class="card-body">
+          <div class="form-group form-group-inline">
+            <label class="toggle-label">
+              <input type="checkbox" id="raindropEnabled" name="raindropEnabled">
+              <span>Enable Raindrop.io</span>
+            </label>
+          </div>
+          <div class="form-hint" style="margin-bottom: 16px;">
+            Save bookmarks to Raindrop.io with AI-generated tags. Create a test token at
+            <a href="https://app.raindrop.io/settings/integrations" target="_blank">Raindrop.io Integrations</a>.
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="raindropAccessToken">Access Token</label>
+            <input
+              type="password"
+              id="raindropAccessToken"
+              name="raindropAccessToken"
+              class="form-input mono"
+              placeholder="Your Raindrop.io access token"
+              autocomplete="off"
+            >
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
           <span class="card-title">Domain Rules</span>
           <span class="badge optional">Optional</span>
         </div>

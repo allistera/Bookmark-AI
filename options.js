@@ -12,7 +12,11 @@ const DEFAULT_SETTINGS = {
   instapaperEnabled: true,
   todoistEnabled: false,
   thingsEnabled: false,
-  domainRules: []
+  domainRules: [],
+  readwiseEnabled: false,
+  readwiseAccessToken: '',
+  raindropEnabled: false,
+  raindropAccessToken: ''
 };
 
 let currentProvider = 'anthropic';
@@ -112,6 +116,10 @@ async function loadSettings() {
     document.getElementById('instapaperEnabled').checked = settings.instapaperEnabled !== false;
     document.getElementById('todoistEnabled').checked = settings.todoistEnabled !== false;
     document.getElementById('thingsEnabled').checked = settings.thingsEnabled !== false;
+    document.getElementById('readwiseEnabled').checked = settings.readwiseEnabled === true;
+    document.getElementById('readwiseAccessToken').value = settings.readwiseAccessToken;
+    document.getElementById('raindropEnabled').checked = settings.raindropEnabled === true;
+    document.getElementById('raindropAccessToken').value = settings.raindropAccessToken;
 
     domainRules = Array.isArray(settings.domainRules) ? settings.domainRules : [];
     renderDomainRules();
@@ -226,6 +234,10 @@ async function saveSettings(event) {
   const instapaperEnabled = document.getElementById('instapaperEnabled').checked;
   const todoistEnabled = document.getElementById('todoistEnabled').checked;
   const thingsEnabled = document.getElementById('thingsEnabled').checked;
+  const readwiseEnabled = document.getElementById('readwiseEnabled').checked;
+  const readwiseAccessToken = document.getElementById('readwiseAccessToken').value.trim();
+  const raindropEnabled = document.getElementById('raindropEnabled').checked;
+  const raindropAccessToken = document.getElementById('raindropAccessToken').value.trim();
 
   try {
     await chrome.storage.sync.set({
@@ -241,7 +253,11 @@ async function saveSettings(event) {
       instapaperEnabled,
       todoistEnabled,
       thingsEnabled,
-      domainRules
+      domainRules,
+      readwiseEnabled,
+      readwiseAccessToken,
+      raindropEnabled,
+      raindropAccessToken
     });
 
     showStatus('Settings saved successfully!', 'success');

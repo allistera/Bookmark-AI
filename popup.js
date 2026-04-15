@@ -30,7 +30,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     todoistApiToken: '',
     instapaperEnabled: true,
     todoistEnabled: false,
-    thingsEnabled: false
+    thingsEnabled: false,
+    readwiseEnabled: false,
+    readwiseAccessToken: '',
+    raindropEnabled: false,
+    raindropAccessToken: ''
   });
 
   function isMacOrIOS() {
@@ -88,6 +92,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // Only show Readwise option if enabled and token is set
+  const readwiseRow = document.getElementById('saveToReadwiseRow');
+  if (readwiseRow) {
+    if (settings.readwiseEnabled && settings.readwiseAccessToken?.trim()) {
+      readwiseRow.style.display = '';
+    } else {
+      readwiseRow.style.display = 'none';
+      const readwiseCheckbox = document.getElementById('saveToReadwise');
+      if (readwiseCheckbox) readwiseCheckbox.checked = false;
+    }
+  }
+
+  // Only show Raindrop option if enabled and token is set
+  const raindropRow = document.getElementById('saveToRaindropRow');
+  if (raindropRow) {
+    if (settings.raindropEnabled && settings.raindropAccessToken?.trim()) {
+      raindropRow.style.display = '';
+    } else {
+      raindropRow.style.display = 'none';
+      const raindropCheckbox = document.getElementById('saveToRaindrop');
+      if (raindropCheckbox) raindropCheckbox.checked = false;
+    }
+  }
+
   document.getElementById('analyzeBtn').addEventListener('click', analyzeAndBookmark);
   document.getElementById('cancelBtn').addEventListener('click', () => window.close());
   document.getElementById('settingsLink').addEventListener('click', (e) => {
@@ -112,6 +140,8 @@ async function analyzeAndBookmark() {
   const saveToInstapaper = document.getElementById('saveToInstapaper').checked;
   const createTodoist = document.getElementById('createTodoist').checked;
   const createThings = document.getElementById('createThings').checked;
+  const saveToReadwise = document.getElementById('saveToReadwise').checked;
+  const saveToRaindrop = document.getElementById('saveToRaindrop').checked;
 
   analyzeBtn.disabled = true;
   showStatus('Analyzing page...', 'loading');
@@ -124,7 +154,9 @@ async function analyzeAndBookmark() {
       saveToInstapaper: saveToInstapaper,
       createTodoist: createTodoist,
       createThings: createThings,
-      autoBookmark: autoBookmark
+      autoBookmark: autoBookmark,
+      saveToReadwise: saveToReadwise,
+      saveToRaindrop: saveToRaindrop
     });
 
     if (response.success) {
@@ -248,6 +280,26 @@ function displayResults(data) {
     el.appendChild(text);
 
     document.getElementById('thingsContainer').style.display = 'block';
+  }
+
+  if (data.readwise) {
+    const el = document.getElementById('readwiseStatus');
+    el.textContent = '';
+    const dot = document.createElement('span');
+    dot.className = `dot ${data.readwise.saved ? 'success' : 'error'}`;
+    el.appendChild(dot);
+    el.appendChild(document.createTextNode(data.readwise.saved ? 'Saved' : (data.readwise.error || 'Not saved')));
+    document.getElementById('readwiseContainer').style.display = 'block';
+  }
+
+  if (data.raindrop) {
+    const el = document.getElementById('raindropStatus');
+    el.textContent = '';
+    const dot = document.createElement('span');
+    dot.className = `dot ${data.raindrop.saved ? 'success' : 'error'}`;
+    el.appendChild(dot);
+    el.appendChild(document.createTextNode(data.raindrop.saved ? 'Saved' : (data.raindrop.error || 'Not saved')));
+    document.getElementById('raindropContainer').style.display = 'block';
   }
 }
 

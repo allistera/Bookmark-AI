@@ -441,6 +441,62 @@ async function createTodoistTask(url, title, summary, apiToken) {
 }
 
 /**
+ * Saves a URL to Readwise Reader via the v3 Save API.
+ * @see https://readwise.io/reader_api
+ */
+async function saveToReadwise(url, title, accessToken) {
+  try {
+    const response = await fetch('https://readwise.io/api/v3/save/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Token ${accessToken}`
+      },
+      body: JSON.stringify({ url, title })
+    });
+    if (response.ok) {
+      return { success: true };
+    } else if (response.status === 401) {
+      return { success: false, error: 'Invalid Readwise access token' };
+    } else {
+      const text = await response.text();
+      return { success: false, error: `Readwise error: ${response.status} - ${text}` };
+    }
+  } catch (error) {
+    return { success: false, error: error.message || 'Unknown error' };
+  }
+}
+
+/**
+ * Saves a URL to Raindrop.io via the REST API.
+ * @see https://developer.raindrop.io/v1/raindrops/single#create-raindrop
+ */
+async function saveToRaindrop(url, title, tags, accessToken) {
+  try {
+    const body = { link: url, title: title || url };
+    if (tags && tags.length > 0) body.tags = tags;
+    const response = await fetch('https://api.raindrop.io/rest/v1/raindrop', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      },
+      body: JSON.stringify(body)
+    });
+    if (response.ok) {
+      return { success: true };
+    } else if (response.status === 401) {
+      return { success: false, error: 'Invalid Raindrop.io access token' };
+    } else {
+      const text = await response.text();
+      return { success: false, error: `Raindrop.io error: ${response.status} - ${text}` };
+    }
+  } catch (error) {
+    return { success: false, error: error.message || 'Unknown error' };
+  }
+}
+
+/**
  * Opens the Things app (macOS/iOS) to add a to-do via URL scheme.
  * Uses things:///add?title=...&notes=... (no API token required).
  * @see https://culturedcode.com/things/help/url-scheme/
@@ -470,7 +526,7 @@ async function findDuplicateBookmark(url) {
   return results.length > 0 ? results[0] : null;
 }
 
-async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInstapaperOption, createTodoist, createThings, autoBookmark }) {
+async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInstapaperOption, createTodoist, createThings, autoBookmark, saveToReadwise: saveToReadwiseOption, saveToRaindrop: saveToRaindropOption }) {
   try {
     // Duplicate detection — check before calling AI
     const duplicate = await findDuplicateBookmark(url);
@@ -492,7 +548,11 @@ async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInsta
       instapaperUsername: '',
       instapaperPassword: '',
       todoistApiToken: '',
-      domainRules: []
+      domainRules: [],
+      readwiseEnabled: false,
+      readwiseAccessToken: '',
+      raindropEnabled: false,
+      raindropAccessToken: ''
     });
 
     const provider = settings.aiProvider || 'anthropic';
@@ -551,6 +611,18 @@ async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInsta
       thingsResult = await addToThings(url, analysis.title, analysis.summary);
     }
 
+    // Save to Readwise if requested and token is configured
+    let readwiseResult = null;
+    if (saveToReadwiseOption && settings.readwiseEnabled && settings.readwiseAccessToken) {
+      readwiseResult = await saveToReadwise(url, analysis.title, settings.readwiseAccessToken);
+    }
+
+    // Save to Raindrop.io if requested and token is configured
+    let raindropResult = null;
+    if (saveToRaindropOption && settings.raindropEnabled && settings.raindropAccessToken) {
+      raindropResult = await saveToRaindrop(url, analysis.title, analysis.categories, settings.raindropAccessToken);
+    }
+
     let bookmarkCreated = false;
     let bookmarkId = null;
 
@@ -585,6 +657,14 @@ async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInsta
         things: thingsResult ? {
           opened: thingsResult.success,
           error: thingsResult.error
+        } : null,
+        readwise: readwiseResult ? {
+          saved: readwiseResult.success,
+          error: readwiseResult.error
+        } : null,
+        raindrop: raindropResult ? {
+          saved: raindropResult.success,
+          error: raindropResult.error
         } : null,
         bookmarkCreated: bookmarkCreated,
         chromeBookmarkId: bookmarkId,
