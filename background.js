@@ -491,7 +491,8 @@ async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInsta
       openrouterModel: '',
       instapaperUsername: '',
       instapaperPassword: '',
-      todoistApiToken: ''
+      todoistApiToken: '',
+      domainRules: []
     });
 
     const provider = settings.aiProvider || 'anthropic';
@@ -514,8 +515,13 @@ async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInsta
       }
     }
 
-    // Analyze the bookmark using the configured AI provider
-    const analysis = await analyzeBookmark(url, settings, provider, title);
+    // Check domain rules before calling AI
+    const ruleFolder = matchesDomainRule(url, settings.domainRules || []);
+
+    // Analyze the bookmark using the configured AI provider (or use domain rule)
+    const analysis = ruleFolder
+      ? { isArticle: false, contentType: 'page', title: title || url, summary: '', categories: [], matchedCategory: ruleFolder }
+      : await analyzeBookmark(url, settings, provider, title);
 
     // Save to Instapaper if requested, it's an article, and credentials are configured
     let instapaperResult = null;
@@ -628,6 +634,41 @@ async function createBookmarkInCategory(url, title, categoryPath) {
     console.error('Error creating bookmark:', error);
     throw error;
   }
+}
+
+/**
+ * Checks if a URL matches any domain rule and returns the target folder path.
+ * Rules with a "/" are matched as hostname + path prefix (e.g. "youtube.com/watch").
+ * Rules without "/" are matched as hostname only (e.g. "github.com").
+ * @param {string} url
+ * @param {Array<{domain: string, folder: string}>} rules
+ * @returns {string|null} The matched folder path, or null if no rule matches
+ */
+function matchesDomainRule(url, rules) {
+  if (!rules || rules.length === 0) return null;
+  try {
+    const urlObj = new URL(url);
+    for (const rule of rules) {
+      const domain = (rule.domain || '').trim();
+      if (!domain || !rule.folder) continue;
+      if (domain.includes('/')) {
+        const slashIdx = domain.indexOf('/');
+        const ruleDomain = domain.slice(0, slashIdx);
+        const rulePath = domain.slice(slashIdx); // includes leading /
+        const hostnameMatch = urlObj.hostname === ruleDomain || urlObj.hostname === `www.${ruleDomain}`;
+        if (hostnameMatch && urlObj.pathname.startsWith(rulePath)) {
+          return rule.folder;
+        }
+      } else {
+        if (urlObj.hostname === domain || urlObj.hostname === `www.${domain}`) {
+          return rule.folder;
+        }
+      }
+    }
+  } catch {
+    // invalid URL, skip rule matching
+  }
+  return null;
 }
 
 /**

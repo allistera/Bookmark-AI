@@ -11,10 +11,12 @@ const DEFAULT_SETTINGS = {
   todoistApiToken: '',
   instapaperEnabled: true,
   todoistEnabled: false,
-  thingsEnabled: false
+  thingsEnabled: false,
+  domainRules: []
 };
 
 let currentProvider = 'anthropic';
+let domainRules = [];
 
 // Load saved settings on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -29,6 +31,16 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('loadModelsBtn').addEventListener('click', () => loadOpenRouterModels());
+
+  document.getElementById('addRuleBtn').addEventListener('click', () => {
+    const domain = document.getElementById('newRuleDomain').value.trim();
+    const folder = document.getElementById('newRuleFolder').value.trim();
+    if (!domain || !folder) return;
+    domainRules.push({ domain, folder });
+    renderDomainRules();
+    document.getElementById('newRuleDomain').value = '';
+    document.getElementById('newRuleFolder').value = '';
+  });
 });
 
 // Handle form submission
@@ -44,6 +56,43 @@ function updateProviderUI(provider) {
   document.getElementById('anthropicSection').style.display = provider === 'anthropic' ? 'block' : 'none';
   document.getElementById('openaiSection').style.display = provider === 'openai' ? 'block' : 'none';
   document.getElementById('openrouterSection').style.display = provider === 'openrouter' ? 'block' : 'none';
+}
+
+function renderDomainRules() {
+  const list = document.getElementById('domainRulesList');
+  list.textContent = '';
+  if (domainRules.length === 0) return;
+  domainRules.forEach((rule, idx) => {
+    const item = document.createElement('div');
+    item.className = 'rule-item';
+
+    const domainEl = document.createElement('span');
+    domainEl.className = 'rule-domain';
+    domainEl.textContent = rule.domain;
+
+    const arrow = document.createElement('span');
+    arrow.className = 'rule-arrow';
+    arrow.textContent = '→';
+
+    const folderEl = document.createElement('span');
+    folderEl.className = 'rule-folder';
+    folderEl.textContent = rule.folder;
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'btn-remove';
+    removeBtn.textContent = '×';
+    removeBtn.title = 'Remove rule';
+    removeBtn.addEventListener('click', () => {
+      domainRules.splice(idx, 1);
+      renderDomainRules();
+    });
+
+    item.appendChild(domainEl);
+    item.appendChild(arrow);
+    item.appendChild(folderEl);
+    item.appendChild(removeBtn);
+    list.appendChild(item);
+  });
 }
 
 async function loadSettings() {
@@ -63,6 +112,9 @@ async function loadSettings() {
     document.getElementById('instapaperEnabled').checked = settings.instapaperEnabled !== false;
     document.getElementById('todoistEnabled').checked = settings.todoistEnabled !== false;
     document.getElementById('thingsEnabled').checked = settings.thingsEnabled !== false;
+
+    domainRules = Array.isArray(settings.domainRules) ? settings.domainRules : [];
+    renderDomainRules();
 
     // If an OpenRouter model was previously saved, load the model list and pre-select it
     if (settings.openrouterApiKey && settings.openrouterModel) {
@@ -188,7 +240,8 @@ async function saveSettings(event) {
       todoistApiToken,
       instapaperEnabled,
       todoistEnabled,
-      thingsEnabled
+      thingsEnabled,
+      domainRules
     });
 
     showStatus('Settings saved successfully!', 'success');

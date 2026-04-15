@@ -362,6 +362,53 @@
       opacity: 0.6;
       cursor: not-allowed;
     }
+
+    .rule-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid #f1f3f4;
+      font-size: 13px;
+    }
+
+    .rule-item:last-child {
+      border-bottom: none;
+    }
+
+    .rule-domain {
+      font-family: 'Roboto Mono', monospace;
+      color: #1967d2;
+      background: #e8f0fe;
+      padding: 2px 6px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    .rule-arrow {
+      color: #5f6368;
+      flex-shrink: 0;
+    }
+
+    .rule-folder {
+      color: #202124;
+      flex: 1;
+    }
+
+    .btn-remove {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #ea4335;
+      font-size: 16px;
+      padding: 0 4px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .btn-remove:hover {
+      color: #c5221f;
+    }
   </style>
 </head>
 <body>
@@ -546,6 +593,31 @@
           </div>
           <div class="form-hint">
             Add bookmarks as to-dos in the Things app (macOS/iOS). The option only appears in the popup when you're on a Mac or iOS device.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Domain Rules</span>
+          <span class="badge optional">Optional</span>
+        </div>
+        <div class="card-body">
+          <div class="form-hint" style="margin-bottom: 16px;">
+            Automatically save bookmarks from specific domains to a folder, skipping AI analysis.
+            Use <code>github.com</code> to match all pages, or <code>youtube.com/watch</code> to match by path prefix.
+          </div>
+          <div id="domainRulesList" style="margin-bottom: 12px;"></div>
+          <div style="display: flex; gap: 8px; align-items: flex-end;">
+            <div style="flex: 1;">
+              <label class="form-label" for="newRuleDomain">Domain</label>
+              <input type="text" id="newRuleDomain" class="form-input" placeholder="github.com">
+            </div>
+            <div style="flex: 1;">
+              <label class="form-label" for="newRuleFolder">Folder</label>
+              <input type="text" id="newRuleFolder" class="form-input" placeholder="Development/GitHub">
+            </div>
+            <button type="button" class="btn-load" id="addRuleBtn" style="margin-bottom: 0;">Add</button>
           </div>
         </div>
       </div>
