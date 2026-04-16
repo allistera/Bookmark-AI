@@ -3,6 +3,11 @@ let bookmarks = [];
 document.addEventListener('DOMContentLoaded', async () => {
   await loadUnsortedBookmarks();
 
+  // Delegated listener — handles all checkbox changes without per-row binding
+  document.getElementById('bookmarkRows').addEventListener('change', (e) => {
+    if (e.target.classList.contains('bm-cb')) updateApplyCount();
+  });
+
   document.getElementById('analyzeBtn').addEventListener('click', analyzeAll);
   document.getElementById('applyBtn').addEventListener('click', applySelected);
   document.getElementById('selectAll').addEventListener('change', (e) => {
@@ -14,7 +19,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadUnsortedBookmarks() {
-  const response = await chrome.runtime.sendMessage({ action: 'getUnsortedBookmarks' });
+  let response;
+  try {
+    response = await chrome.runtime.sendMessage({ action: 'getUnsortedBookmarks' });
+  } catch (e) {
+    showAlert('Extension error: ' + e.message, 'error');
+    return;
+  }
   if (!response.success) {
     showAlert('Error loading bookmarks: ' + response.error, 'error');
     return;
@@ -37,17 +48,14 @@ function renderTable() {
   bookmarks.forEach((bm, idx) => {
     const tr = document.createElement('tr');
 
-    // Checkbox
     const tdCb = document.createElement('td');
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.className = 'bm-cb';
     cb.dataset.idx = idx;
     cb.checked = true;
-    cb.addEventListener('change', updateApplyCount);
     tdCb.appendChild(cb);
 
-    // Title + URL
     const tdTitle = document.createElement('td');
     const titleDiv = document.createElement('div');
     titleDiv.className = 'bm-title';
@@ -63,12 +71,10 @@ function renderTable() {
     tdTitle.appendChild(titleDiv);
     tdTitle.appendChild(urlDiv);
 
-    // Suggestion cell (filled after analysis)
     const tdSug = document.createElement('td');
     tdSug.id = `sug-${idx}`;
     tdSug.textContent = '—';
 
-    // Status cell
     const tdStatus = document.createElement('td');
     const statusEl = document.createElement('span');
     statusEl.id = `status-${idx}`;

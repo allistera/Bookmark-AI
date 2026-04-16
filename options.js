@@ -16,7 +16,10 @@ const DEFAULT_SETTINGS = {
   readwiseEnabled: false,
   readwiseAccessToken: '',
   raindropEnabled: false,
-  raindropAccessToken: ''
+  raindropAccessToken: '',
+  healthCheckEnabled: false,
+  healthCheckInterval: 'weekly',
+  healthCheckStaleDays: 365
 };
 
 let currentProvider = 'anthropic';
@@ -24,6 +27,31 @@ let domainRules = [];
 
 // Load saved settings on page load
 document.addEventListener('DOMContentLoaded', () => {
+  // Navigation tab switching
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+      document.querySelectorAll('.settings-section').forEach(sec => sec.classList.remove('active'));
+      item.classList.add('active');
+      document.getElementById(item.dataset.section).classList.add('active');
+    });
+  });
+
+  // Health check interval tabs
+  document.querySelectorAll('.interval-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.interval-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+    });
+  });
+
+  document.getElementById('healthCheckEnabled').addEventListener('change', () => {
+    const enabled = document.getElementById('healthCheckEnabled').checked;
+    document.getElementById('intervalGroup').style.opacity = enabled ? '1' : '0.4';
+    document.getElementById('staleGroup').style.opacity = enabled ? '1' : '0.4';
+  });
+
   loadSettings();
 
   // Provider tab switching
@@ -120,6 +148,17 @@ async function loadSettings() {
     document.getElementById('readwiseAccessToken').value = settings.readwiseAccessToken;
     document.getElementById('raindropEnabled').checked = settings.raindropEnabled === true;
     document.getElementById('raindropAccessToken').value = settings.raindropAccessToken;
+
+    document.getElementById('healthCheckEnabled').checked = settings.healthCheckEnabled === true;
+    document.getElementById('healthCheckStaleDays').value = settings.healthCheckStaleDays || 365;
+    document.querySelectorAll('.interval-tab').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.interval === (settings.healthCheckInterval || 'weekly'));
+    });
+
+    // trigger initial visibility
+    const enabled = settings.healthCheckEnabled === true;
+    document.getElementById('intervalGroup').style.opacity = enabled ? '1' : '0.4';
+    document.getElementById('staleGroup').style.opacity = enabled ? '1' : '0.4';
 
     domainRules = Array.isArray(settings.domainRules) ? settings.domainRules : [];
     renderDomainRules();
@@ -238,6 +277,10 @@ async function saveSettings(event) {
   const readwiseAccessToken = document.getElementById('readwiseAccessToken').value.trim();
   const raindropEnabled = document.getElementById('raindropEnabled').checked;
   const raindropAccessToken = document.getElementById('raindropAccessToken').value.trim();
+  const healthCheckEnabled = document.getElementById('healthCheckEnabled').checked;
+  const healthCheckStaleDays = parseInt(document.getElementById('healthCheckStaleDays').value, 10) || 365;
+  const activeTab = document.querySelector('.interval-tab.active');
+  const healthCheckInterval = activeTab ? activeTab.dataset.interval : 'weekly';
 
   try {
     await chrome.storage.sync.set({
@@ -257,8 +300,16 @@ async function saveSettings(event) {
       readwiseEnabled,
       readwiseAccessToken,
       raindropEnabled,
-      raindropAccessToken
+      raindropAccessToken,
+      healthCheckEnabled,
+      healthCheckInterval,
+      healthCheckStaleDays
     });
+
+    // Also set the alarm in background for health checks
+    if (chrome.runtime && chrome.runtime.sendMessage) {
+      chrome.runtime.sendMessage({ action: 'setupHealthCheckAlarm' }).catch(() => {});
+    }
 
     showStatus('Settings saved successfully!', 'success');
     setTimeout(hideStatus, 3000);

@@ -542,51 +542,7 @@
     <!-- Results list -->
     <div id="resultsList"></div>
 
-    <!-- Auto Health Check settings -->
-    <div class="card" style="margin-top:32px">
-      <div class="card-header">
-        <span class="card-title">Automatic Health Checks</span>
-        <span class="badge-opt">Optional</span>
       </div>
-      <div class="card-body">
-        <div class="form-group form-group-inline">
-          <label class="toggle-label">
-            <input type="checkbox" id="healthCheckEnabled">
-            <span>Enable automatic checks</span>
-          </label>
-        </div>
-        <div class="form-hint" style="margin-bottom:20px">
-          Runs a health check in the background on the selected schedule. Results appear here automatically.
-        </div>
-
-        <div class="form-group" id="intervalGroup">
-          <label class="form-label">Frequency</label>
-          <div class="interval-tabs">
-            <button type="button" class="interval-tab active" data-interval="weekly">Weekly</button>
-            <button type="button" class="interval-tab" data-interval="daily">Daily</button>
-            <button type="button" class="interval-tab" data-interval="monthly">Monthly</button>
-          </div>
-        </div>
-
-        <div class="form-group" id="staleGroup">
-          <label class="form-label">Mark bookmarks as stale after</label>
-          <div class="stale-row">
-            <input type="number" id="healthCheckStaleDays" class="stale-input" min="30" max="3650" value="365">
-            <span class="stale-unit">days without being opened</span>
-          </div>
-          <div class="form-hint" style="margin-top:6px">
-            Chrome tracks when bookmarks were last visited. Bookmarks older than this threshold are flagged as stale.
-          </div>
-        </div>
-
-        <div class="save-actions">
-          <button class="btn btn-primary" id="saveScheduleBtn">Save Settings</button>
-          <span class="status-msg" id="scheduleStatus"></span>
-        </div>
-      </div>
-    </div>
-
-  </div>
   <script src="health-check.js"></script>
 </body>
 </html>
