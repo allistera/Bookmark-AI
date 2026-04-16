@@ -5,12 +5,9 @@ let pollTimer = null;
 // ── Initialization ──────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
-  await loadScheduleSettings();
   await loadResults();
 
   document.getElementById('runBtn').addEventListener('click', runHealthCheck);
-  document.getElementById('saveScheduleBtn').addEventListener('click', saveScheduleSettings);
-  document.getElementById('healthCheckEnabled').addEventListener('change', toggleScheduleVisibility);
 
   // Summary card filters
   document.querySelectorAll('.summary-card').forEach(card => {
@@ -19,75 +16,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // Interval tab switching
-  document.querySelectorAll('.interval-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.interval-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-    });
-  });
-
   // Bulk actions
   document.getElementById('bulkDeleteDead').addEventListener('click', () => bulkFix('deleteAllDead'));
   document.getElementById('bulkFixRedirects').addEventListener('click', () => bulkFix('fixAllRedirects'));
   document.getElementById('bulkDismissStale').addEventListener('click', () => bulkFix('dismissAllStale'));
-
-  toggleScheduleVisibility();
 });
-
-// ── Schedule settings ────────────────────────────────────────
-
-async function loadScheduleSettings() {
-  const settings = await chrome.storage.sync.get({
-    healthCheckEnabled: false,
-    healthCheckInterval: 'weekly',
-    healthCheckStaleDays: 365
-  });
-
-  document.getElementById('healthCheckEnabled').checked = settings.healthCheckEnabled;
-  document.getElementById('healthCheckStaleDays').value = settings.healthCheckStaleDays;
-
-  document.querySelectorAll('.interval-tab').forEach(tab => {
-    tab.classList.toggle('active', tab.dataset.interval === settings.healthCheckInterval);
-  });
-
-  toggleScheduleVisibility();
-}
-
-function toggleScheduleVisibility() {
-  const enabled = document.getElementById('healthCheckEnabled').checked;
-  document.getElementById('intervalGroup').style.opacity = enabled ? '1' : '0.4';
-  document.getElementById('staleGroup').style.opacity = enabled ? '1' : '0.4';
-}
-
-async function saveScheduleSettings() {
-  const enabled = document.getElementById('healthCheckEnabled').checked;
-  const staleDays = parseInt(document.getElementById('healthCheckStaleDays').value, 10) || 365;
-  const activeTab = document.querySelector('.interval-tab.active');
-  const interval = activeTab ? activeTab.dataset.interval : 'weekly';
-
-  await chrome.storage.sync.set({
-    healthCheckEnabled: enabled,
-    healthCheckInterval: interval,
-    healthCheckStaleDays: Math.max(30, Math.min(3650, staleDays))
-  });
-
-  // Tell background to update the alarm
-  await sendMessage({ action: 'setupHealthCheckAlarm' });
-
-  showScheduleStatus('Settings saved!', 'success');
-  setTimeout(() => hideScheduleStatus(), 3000);
-}
-
-function showScheduleStatus(msg, type) {
-  const el = document.getElementById('scheduleStatus');
-  el.textContent = msg;
-  el.className = `status-msg ${type} visible`;
-}
-
-function hideScheduleStatus() {
-  document.getElementById('scheduleStatus').classList.remove('visible');
-}
 
 // ── Run health check ─────────────────────────────────────────
 
@@ -200,7 +133,7 @@ function renderResults(results) {
 
   const filtered = filterResults(results, currentFilter);
 
-  updateBulkBar(results);
+  updateBulkBar(filtered);
 
   if (filtered.length === 0) {
     renderEmptyState(currentFilter === 'ok' ? 'all-good' : 'no-issues');
@@ -429,20 +362,25 @@ function updateBulkBar(results) {
   const redirectCount = results.filter(r => r.issues.includes('redirect') && r.newUrl && !r.dismissed).length;
   const staleCount = results.filter(r => r.issues.includes('stale') && !r.dismissed).length;
 
+  // Only show bulk actions relevant to the current filter
+  const showDead = ['issues', 'dead', 'domain_gone'].includes(currentFilter) && deadCount > 1;
+  const showRedirects = ['issues', 'redirect'].includes(currentFilter) && redirectCount > 1;
+  const showStale = ['issues', 'stale'].includes(currentFilter) && staleCount > 1;
+
   const bulkDeleteDead = document.getElementById('bulkDeleteDead');
   const bulkFixRedirects = document.getElementById('bulkFixRedirects');
   const bulkDismissStale = document.getElementById('bulkDismissStale');
 
-  bulkDeleteDead.style.display = deadCount > 1 ? 'inline-block' : 'none';
+  bulkDeleteDead.style.display = showDead ? 'inline-block' : 'none';
   bulkDeleteDead.textContent = `Delete all dead (${deadCount})`;
 
-  bulkFixRedirects.style.display = redirectCount > 1 ? 'inline-block' : 'none';
+  bulkFixRedirects.style.display = showRedirects ? 'inline-block' : 'none';
   bulkFixRedirects.textContent = `Fix all redirects (${redirectCount})`;
 
-  bulkDismissStale.style.display = staleCount > 1 ? 'inline-block' : 'none';
+  bulkDismissStale.style.display = showStale ? 'inline-block' : 'none';
   bulkDismissStale.textContent = `Dismiss all stale (${staleCount})`;
 
-  const anyBulk = deadCount > 1 || redirectCount > 1 || staleCount > 1;
+  const anyBulk = showDead || showRedirects || showStale;
   document.getElementById('bulkBar').style.display = anyBulk ? 'flex' : 'none';
 }
 

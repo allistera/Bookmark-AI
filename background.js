@@ -1,5 +1,8 @@
 const USER_AGENT = 'Mozilla/5.0 (compatible; Bookmark-AI/1.0)';
 
+// Chrome assigns fixed IDs to the built-in bookmark containers
+const BOOKMARK_ROOT_IDS = { ROOT: '0', BAR: '1', OTHER: '2' };
+
 // Listen for messages from popup and health-check page
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'analyzeBookmark') {
@@ -106,13 +109,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
   }
-
-  if (request.action === 'runBenchmark') {
-    handleRunBenchmark(request)
-      .then(sendResponse)
-      .catch(error => sendResponse({ success: false, error: error.message }));
-    return true;
-  }
 });
 
 /**
@@ -130,7 +126,7 @@ async function getExistingBookmarkFolders() {
 
       // Skip root nodes (Bookmarks Bar, Other Bookmarks, Mobile Bookmarks)
       // but process their children
-      if (node.parentId === '0') {
+      if (node.parentId === BOOKMARK_ROOT_IDS.ROOT) {
         if (node.children) {
           extractFolders(node.children, '');
         }
@@ -694,33 +690,22 @@ async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInsta
  * @param {string} categoryPath - The category path (e.g., "Work/Projects/Web")
  * @returns {Promise<string>} The created bookmark ID
  */
-async function createBookmarkInCategory(url, title, categoryPath) {
-  try {
-    // Parse the category path
-    const categories = categoryPath.split('/').filter(c => c.trim().length > 0);
-
-    // Start from the bookmarks bar
-    let currentParentId = '1'; // '1' is the bookmarks bar
-
-    // Navigate/create the category folder hierarchy
-    for (const category of categories) {
-      const folder = await getOrCreateFolder(category, currentParentId);
-      currentParentId = folder.id;
-    }
-
-    // Create the bookmark in the final folder
-    const bookmark = await chrome.bookmarks.create({
-      parentId: currentParentId,
-      title: title,
-      url: url
-    });
-
-    console.log('Bookmark created:', bookmark);
-    return bookmark.id;
-  } catch (error) {
-    console.error('Error creating bookmark:', error);
-    throw error;
+// Walks (and creates if needed) the folder hierarchy for categoryPath,
+// returning the ID of the deepest folder.
+async function ensureFolderPath(categoryPath) {
+  const segments = categoryPath.split('/').filter(c => c.trim().length > 0);
+  let parentId = BOOKMARK_ROOT_IDS.BAR;
+  for (const segment of segments) {
+    const folder = await getOrCreateFolder(segment, parentId);
+    parentId = folder.id;
   }
+  return parentId;
+}
+
+async function createBookmarkInCategory(url, title, categoryPath) {
+  const parentId = await ensureFolderPath(categoryPath);
+  const bookmark = await chrome.bookmarks.create({ parentId, title, url });
+  return bookmark.id;
 }
 
 /**
@@ -752,8 +737,8 @@ function matchesDomainRule(url, rules) {
         }
       }
     }
-  } catch {
-    // invalid URL, skip rule matching
+  } catch (err) {
+    console.warn('Domain rule matching skipped for invalid URL:', url, err);
   }
   return null;
 }
@@ -764,23 +749,14 @@ function matchesDomainRule(url, rules) {
  */
 async function getUnsortedBookmarks() {
   const [bar, other] = await Promise.all([
-    chrome.bookmarks.getChildren('1'),
-    chrome.bookmarks.getChildren('2')
+    chrome.bookmarks.getChildren(BOOKMARK_ROOT_IDS.BAR),
+    chrome.bookmarks.getChildren(BOOKMARK_ROOT_IDS.OTHER)
   ]);
   return [...bar, ...other].filter(b => b.url);
 }
 
 async function handleGetAISuggestion({ url, title }) {
-  const settings = await chrome.storage.sync.get({
-    aiProvider: 'anthropic',
-    anthropicApiKey: '',
-    openaiApiKey: '',
-    openaiModel: 'gpt-4o',
-    openrouterApiKey: '',
-    openrouterModel: '',
-    domainRules: []
-  });
-  const provider = settings.aiProvider || 'anthropic';
+  const { settings, provider } = await getAIConfig();
   const ruleFolder = matchesDomainRule(url, settings.domainRules || []);
   if (ruleFolder) {
     return { success: true, matchedCategory: ruleFolder };
@@ -795,56 +771,9 @@ async function handleGetAISuggestion({ url, title }) {
 }
 
 async function handleMoveBookmark({ bookmarkId, categoryPath }) {
-  const categories = categoryPath.split('/').filter(c => c.trim().length > 0);
-  let currentParentId = '1';
-  for (const category of categories) {
-    const folder = await getOrCreateFolder(category, currentParentId);
-    currentParentId = folder.id;
-  }
-  await chrome.bookmarks.move(bookmarkId, { parentId: currentParentId });
+  const parentId = await ensureFolderPath(categoryPath);
+  await chrome.bookmarks.move(bookmarkId, { parentId });
   return { success: true };
-}
-
-async function handleRunBenchmark({ url, title }) {
-  const settings = await chrome.storage.sync.get({
-    aiProvider: 'anthropic',
-    anthropicApiKey: '',
-    openaiApiKey: '',
-    openaiModel: 'gpt-4o',
-    openrouterApiKey: '',
-    openrouterModel: '',
-    domainRules: []
-  });
-  const providers = [];
-  if (settings.anthropicApiKey?.trim()) {
-    providers.push({ label: 'Claude Haiku', provider: 'anthropic' });
-  }
-  if (settings.openaiApiKey?.trim()) {
-    providers.push({ label: settings.openaiModel || 'GPT-4o', provider: 'openai' });
-  }
-  if (settings.openrouterApiKey?.trim() && settings.openrouterModel) {
-    providers.push({ label: settings.openrouterModel, provider: 'openrouter' });
-  }
-  if (providers.length === 0) {
-    return { success: false, error: 'No AI providers configured. Add API keys in Settings.' };
-  }
-  const results = await Promise.all(providers.map(async ({ label, provider }) => {
-    const start = Date.now();
-    try {
-      const analysis = await analyzeBookmark(url, settings, provider, title);
-      return {
-        label,
-        matchedCategory: analysis.isArticle ? 'Article' : (analysis.matchedCategory || 'Other'),
-        contentType: analysis.contentType,
-        isArticle: analysis.isArticle,
-        latencyMs: Date.now() - start,
-        success: true
-      };
-    } catch (error) {
-      return { label, error: error.message, latencyMs: Date.now() - start, success: false };
-    }
-  }));
-  return { success: true, results };
 }
 
 /**
@@ -949,7 +878,8 @@ async function getAIConfig() {
     openaiApiKey: '',
     openaiModel: 'gpt-4o',
     openrouterApiKey: '',
-    openrouterModel: ''
+    openrouterModel: '',
+    domainRules: []
   });
 
   const provider = settings.aiProvider || 'anthropic';
