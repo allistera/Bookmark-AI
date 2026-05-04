@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('bulkDeleteDead').addEventListener('click', () => bulkFix('deleteAllDead'));
   document.getElementById('bulkFixRedirects').addEventListener('click', () => bulkFix('fixAllRedirects'));
   document.getElementById('bulkDismissStale').addEventListener('click', () => bulkFix('dismissAllStale'));
+  document.getElementById('bulkUpdateTitles').addEventListener('click', () => bulkFix('updateAllTitles'));
 });
 
 // ── Run health check ─────────────────────────────────────────
@@ -335,6 +336,11 @@ async function bulkFix(fixType) {
       .filter(r => r.issues.includes('stale') && !r.dismissed)
       .map(r => r.id);
     confirmMsg = `Dismiss ${ids.length} stale bookmarks?`;
+  } else if (fixType === 'updateAllTitles') {
+    ids = currentResults.results
+      .filter(r => r.issues.includes('title_changed') && r.newTitle && !r.dismissed)
+      .map(r => r.id);
+    confirmMsg = `Update titles for ${ids.length} bookmarks?`;
   }
 
   if (ids.length === 0) return;
@@ -361,15 +367,18 @@ function updateBulkBar(results) {
   ).length;
   const redirectCount = results.filter(r => r.issues.includes('redirect') && r.newUrl && !r.dismissed).length;
   const staleCount = results.filter(r => r.issues.includes('stale') && !r.dismissed).length;
+  const titleChangedCount = results.filter(r => r.issues.includes('title_changed') && r.newTitle && !r.dismissed).length;
 
   // Only show bulk actions relevant to the current filter
   const showDead = ['issues', 'dead', 'domain_gone'].includes(currentFilter) && deadCount > 1;
   const showRedirects = ['issues', 'redirect'].includes(currentFilter) && redirectCount > 1;
   const showStale = ['issues', 'stale'].includes(currentFilter) && staleCount > 1;
+  const showTitleChanged = ['issues', 'title_changed'].includes(currentFilter) && titleChangedCount > 1;
 
   const bulkDeleteDead = document.getElementById('bulkDeleteDead');
   const bulkFixRedirects = document.getElementById('bulkFixRedirects');
   const bulkDismissStale = document.getElementById('bulkDismissStale');
+  const bulkUpdateTitles = document.getElementById('bulkUpdateTitles');
 
   bulkDeleteDead.style.display = showDead ? 'inline-block' : 'none';
   bulkDeleteDead.textContent = `Delete all dead (${deadCount})`;
@@ -380,7 +389,10 @@ function updateBulkBar(results) {
   bulkDismissStale.style.display = showStale ? 'inline-block' : 'none';
   bulkDismissStale.textContent = `Dismiss all stale (${staleCount})`;
 
-  const anyBulk = showDead || showRedirects || showStale;
+  bulkUpdateTitles.style.display = showTitleChanged ? 'inline-block' : 'none';
+  bulkUpdateTitles.textContent = `Update all titles (${titleChangedCount})`;
+
+  const anyBulk = showDead || showRedirects || showStale || showTitleChanged;
   document.getElementById('bulkBar').style.display = anyBulk ? 'flex' : 'none';
 }
 

@@ -1320,7 +1320,7 @@ async function applyHealthFix(bookmarkId, fixType, newValue) {
 
 /**
  * Applies a bulk fix to multiple bookmarks of a specific issue type.
- * @param {'deleteAllDead'|'fixAllRedirects'|'dismissAllStale'} fixType
+ * @param {'deleteAllDead'|'fixAllRedirects'|'dismissAllStale'|'updateAllTitles'} fixType
  * @param {string[]} ids
  */
 async function applyBulkFix(fixType, ids) {
@@ -1347,6 +1347,14 @@ async function applyBulkFix(fixType, ids) {
       } else if (fixType === 'dismissAllStale') {
         const entry = results.find(r => r.id === id);
         if (entry) { entry.dismissed = true; modified = true; }
+      } else if (fixType === 'updateAllTitles') {
+        const entry = results.find(r => r.id === id);
+        if (entry && entry.newTitle) {
+          await chrome.bookmarks.update(id, { title: entry.newTitle });
+          entry.fixed = true;
+          entry.title = entry.newTitle;
+          modified = true;
+        }
       }
     } catch (err) {
       console.error(`Bulk fix failed for bookmark ${id}:`, err);
