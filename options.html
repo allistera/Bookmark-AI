@@ -478,6 +478,218 @@
     .stale-input { width: 80px; padding: 6px 10px; border: 1px solid #dadce0; border-radius: 4px; font-size: 14px; font-family: inherit; }
     .stale-input:focus { outline: none; border-color: #1a73e8; }
     .stale-unit { font-size: 13px; color: #202124; }
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: #1a1a1a;
+        color: #e8eaed;
+      }
+
+      .sidebar-header h1 {
+        color: #e8eaed;
+      }
+
+      .sidebar-header p {
+        color: #9aa0a6;
+      }
+
+      .nav-item {
+        color: #9aa0a6;
+      }
+
+      .nav-item:hover {
+        background: #3d3d3d;
+        color: #e8eaed;
+      }
+
+      .nav-item.active {
+        background: #1e3a5f;
+        color: #8ab4f8;
+      }
+
+      .header h1 {
+        color: #e8eaed;
+      }
+
+      .header p {
+        color: #9aa0a6;
+      }
+
+      .card {
+        background: #242424;
+        border-color: #3d3d3d;
+      }
+
+      .card-header {
+        border-bottom-color: #3d3d3d;
+      }
+
+      .card-title {
+        color: #e8eaed;
+      }
+
+      .form-label {
+        color: #e8eaed;
+      }
+
+      .form-hint {
+        color: #9aa0a6;
+      }
+
+      .form-hint a {
+        color: #8ab4f8;
+      }
+
+      .form-input {
+        background: #333333;
+        color: #e8eaed;
+        border-color: #3d3d3d;
+      }
+
+      .form-input:focus {
+        border-color: #8ab4f8;
+        box-shadow: 0 0 0 2px rgba(138, 180, 248, 0.2);
+      }
+
+      .form-input::placeholder {
+        color: #6e6e6e;
+      }
+
+      .form-input-select {
+        background-color: #333333;
+        color: #e8eaed;
+        border-color: #3d3d3d;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='%239aa0a6'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+      }
+
+      .form-input-select:focus {
+        border-color: #8ab4f8;
+        box-shadow: 0 0 0 2px rgba(138, 180, 248, 0.2);
+      }
+
+      .form-input-select:disabled {
+        background-color: #2d2d2d;
+        color: #6e6e6e;
+      }
+
+      .provider-tabs {
+        border-color: #3d3d3d;
+      }
+
+      .provider-tab {
+        background: #2d2d2d;
+        color: #9aa0a6;
+        border-right-color: #3d3d3d;
+      }
+
+      .provider-tab:not(.active):hover {
+        background: #3d3d3d;
+        color: #e8eaed;
+      }
+
+      .btn-secondary {
+        background: #2d2d2d;
+        color: #9aa0a6;
+        border-color: #3d3d3d;
+      }
+
+      .btn-secondary:hover {
+        background: #3d3d3d;
+        color: #e8eaed;
+      }
+
+      .btn-load {
+        background: #2d2d2d;
+        color: #8ab4f8;
+        border-color: #3d3d3d;
+      }
+
+      .btn-load:hover {
+        background: #3d3d3d;
+      }
+
+      .toggle-label {
+        color: #e8eaed;
+      }
+
+      .rule-item {
+        border-bottom-color: #3d3d3d;
+      }
+
+      .rule-domain {
+        background: #1e3a5f;
+        color: #8ab4f8;
+      }
+
+      .rule-arrow {
+        color: #9aa0a6;
+      }
+
+      .rule-folder {
+        color: #e8eaed;
+      }
+
+      .stale-unit {
+        color: #e8eaed;
+      }
+
+      .stale-input {
+        background: #333333;
+        color: #e8eaed;
+        border-color: #3d3d3d;
+      }
+
+      .interval-tabs {
+        border-color: #3d3d3d;
+      }
+
+      .interval-tab {
+        background: #2d2d2d;
+        color: #9aa0a6;
+      }
+
+      .interval-tab:not(:last-child) {
+        border-right-color: #3d3d3d;
+      }
+
+      .interval-tab:not(.active):hover {
+        background: #3d3d3d;
+        color: #e8eaed;
+      }
+
+      .info-card {
+        background: #1e3a5f;
+      }
+
+      .info-card .info-title {
+        color: #8ab4f8;
+      }
+
+      .info-card p {
+        color: #8ab4f8;
+      }
+
+      .warning-card {
+        background: #3d2e00;
+      }
+
+      .warning-card .warning-title {
+        color: #fdd663;
+      }
+
+      .warning-card p {
+        color: #fdd663;
+      }
+
+      .status.success {
+        background: #1a3d2b;
+        color: #81c995;
+      }
+
+      .status.error {
+        background: #3d1a1a;
+        color: #f28b82;
+      }
+    }
   </style>
 </head>
 
@@ -801,6 +1013,39 @@
               <div class="form-hint" style="margin-top:6px">
                 Chrome tracks when bookmarks were last visited. Bookmarks older than this threshold are flagged as stale.
               </div>
+            </div>
+
+            <div class="form-group" id="checkTypesGroup">
+              <label class="form-label">Which checks to run</label>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+                <label class="toggle-label">
+                  <input type="checkbox" id="checkDead" name="checkDead">
+                  <span>Dead links</span>
+                </label>
+                <label class="toggle-label">
+                  <input type="checkbox" id="checkDomainGone" name="checkDomainGone">
+                  <span>Domain gone</span>
+                </label>
+                <label class="toggle-label">
+                  <input type="checkbox" id="checkRedirects" name="checkRedirects">
+                  <span>Redirects</span>
+                </label>
+                <label class="toggle-label">
+                  <input type="checkbox" id="checkStale" name="checkStale">
+                  <span>Stale bookmarks</span>
+                </label>
+                <label class="toggle-label">
+                  <input type="checkbox" id="checkTitleChanged" name="checkTitleChanged">
+                  <span>Title changes</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="toggle-label">
+                <input type="checkbox" id="healthCheckRunOnOpen" name="healthCheckRunOnOpen">
+                <span>If Chrome was closed at scheduled time, run check on next launch</span>
+              </label>
             </div>
           </div>
         </div>

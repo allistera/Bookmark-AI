@@ -19,7 +19,9 @@ const DEFAULT_SETTINGS = {
   raindropAccessToken: '',
   healthCheckEnabled: false,
   healthCheckInterval: 'weekly',
-  healthCheckStaleDays: 365
+  healthCheckStaleDays: 365,
+  healthCheckTypes: { dead: true, domainGone: true, redirects: true, stale: true, titleChanged: true },
+  healthCheckRunOnOpen: true
 };
 
 let currentProvider = 'anthropic';
@@ -50,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const enabled = document.getElementById('healthCheckEnabled').checked;
     document.getElementById('intervalGroup').style.opacity = enabled ? '1' : '0.4';
     document.getElementById('staleGroup').style.opacity = enabled ? '1' : '0.4';
+    document.getElementById('checkTypesGroup').style.opacity = enabled ? '1' : '0.4';
   });
 
   loadSettings();
@@ -159,6 +162,15 @@ async function loadSettings() {
     const enabled = settings.healthCheckEnabled === true;
     document.getElementById('intervalGroup').style.opacity = enabled ? '1' : '0.4';
     document.getElementById('staleGroup').style.opacity = enabled ? '1' : '0.4';
+    document.getElementById('checkTypesGroup').style.opacity = enabled ? '1' : '0.4';
+
+    const types = settings.healthCheckTypes || DEFAULT_SETTINGS.healthCheckTypes;
+    document.getElementById('checkDead').checked = types.dead !== false;
+    document.getElementById('checkDomainGone').checked = types.domainGone !== false;
+    document.getElementById('checkRedirects').checked = types.redirects !== false;
+    document.getElementById('checkStale').checked = types.stale !== false;
+    document.getElementById('checkTitleChanged').checked = types.titleChanged !== false;
+    document.getElementById('healthCheckRunOnOpen').checked = settings.healthCheckRunOnOpen !== false;
 
     domainRules = Array.isArray(settings.domainRules) ? settings.domainRules : [];
     renderDomainRules();
@@ -281,6 +293,14 @@ async function saveSettings(event) {
   const healthCheckStaleDays = parseInt(document.getElementById('healthCheckStaleDays').value, 10) || 365;
   const activeTab = document.querySelector('.interval-tab.active');
   const healthCheckInterval = activeTab ? activeTab.dataset.interval : 'weekly';
+  const healthCheckTypes = {
+    dead: document.getElementById('checkDead').checked,
+    domainGone: document.getElementById('checkDomainGone').checked,
+    redirects: document.getElementById('checkRedirects').checked,
+    stale: document.getElementById('checkStale').checked,
+    titleChanged: document.getElementById('checkTitleChanged').checked
+  };
+  const healthCheckRunOnOpen = document.getElementById('healthCheckRunOnOpen').checked;
 
   try {
     await chrome.storage.sync.set({
@@ -303,7 +323,9 @@ async function saveSettings(event) {
       raindropAccessToken,
       healthCheckEnabled,
       healthCheckInterval,
-      healthCheckStaleDays
+      healthCheckStaleDays,
+      healthCheckTypes,
+      healthCheckRunOnOpen
     });
 
     // Also set the alarm in background for health checks
