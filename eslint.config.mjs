@@ -49,5 +49,15 @@ export default [
         asyncArrow: 'always'
       }]
     }
+  },
+  {
+    files: ['tests/**/*.js'],
+    languageOptions: {
+      sourceType: 'module',
+      globals: {
+        process: 'readonly',
+        globalThis: 'readonly'
+      }
+    }
   }
 ];
