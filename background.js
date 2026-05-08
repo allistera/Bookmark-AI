@@ -822,7 +822,7 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 // Handle context menu clicks
-chrome.contextMenus.onClicked.addListener(async (info, _tab) => {
+chrome.contextMenus.onClicked.addListener(async (info) => {
   if (info.menuItemId === 'bookmark-ai') {
     // Open the popup or trigger analysis
     chrome.action.openPopup();
