@@ -20,7 +20,17 @@ Key Features:
 * Context-Aware Summaries: Extracts and stores brief webpage summaries directly in the bookmark description.
 * Deep Integrations: Automatically syncs saved links to your favorite productivity tools, including Instapaper (for articles), Todoist (for tasks), and Cultured Code Things (for macOS/iOS to-dos).
 * Right-Click Context Menu: Instant bookmarking from any link or page via the right-click menu.
-* Self-Healing Health Checks: Scan and identify broken links, redirects, and offline bookmarks automatically.
+* Self-Healing Health Checks: Scan, identify, and bulk-resolve dead links (HTTP 404/5xx), redirected URLs, changed webpage titles, stale unvisited bookmarks, and unreachable offline domains automatically.
+
+Self-Healing Bookmark Health Checks:
+Websites change, pages move, and domains expire. Bookmark AI includes a sophisticated, privacy-respecting link checker built directly into your browser:
+* Dead & Expired Links: Flags broken HTTP statuses (404, 410, 500) and completely unreachable or defunct domains.
+* Smart Redirect Fixer: Detects permanent/temporary page transfers and updates your bookmark URLs in one click.
+* Title Synchronizer: Inspects HTML headers to retrieve live page titles and offers to update your bookmark labels to match.
+* Declutter Stale Links: Flags bookmarks that have sat unvisited past a user-configured threshold (e.g., 365 days).
+* Automatic Scheduling: Runs background scans on a Daily, Weekly, or Monthly alarm, with missed scan catch-up on browser startup.
+* Interactive Dashboard & Bulk Actions: Filter issues by category and apply one-click bulk operations to fix all redirects, update all titles, or purge all dead links simultaneously.
+* Safe & Gentle Scanning: Throttles checks in small batches of 5 with 150ms pauses and 12-second timeouts to protect your local bandwidth and respect remote server limits.
 
 How to Use:
 1. Navigate to any webpage you want to bookmark.
@@ -129,7 +139,8 @@ https://github.com/allistera/Bookmark-AI
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
-| 2.0.0 | 2026-05-20 | Rebuilt service worker with clean Manifest V3 async/await IIFE routines; completely eliminated legacy callback-to-Promise wrapper utilities across search.js and health-check.js; optimized link health check scanner with robust error handling; updated permissions justifications. | Draft |
+| 2.2.0 | 2026-05-20 | Bumped version to 2.2.0 to resolve Web Store upload conflicts; expanded Bookmark Health Check feature descriptions in developer README and store listing documentation. | Draft |
+| 2.1.0 | 2026-05-20 | Rebuilt service worker with clean Manifest V3 async/await IIFE routines; completely eliminated legacy callback-to-Promise wrapper utilities across search.js and health-check.js; optimized link health check scanner with robust error handling; updated permissions justifications. | Published |
 | 1.0.0 | 2025-03-15 | Initial public release containing multi-provider AI analysis (Anthropic & OpenRouter), full Chrome bookmarks integration, Instapaper, Todoist, and Cultured Code Things support, and interactive link health diagnostics. | Published |
 
 ## Review Notes

@@ -14,6 +14,7 @@ A Chrome extension that uses AI to automatically categorize and organize your bo
 
 - **AI-Powered Analysis**: Analyzes web pages using **Anthropic (Claude)** or **OpenRouter** (many models) to determine the best category
 - **Smart Categorization**: Matches links to your existing bookmark folder structure using AI
+- **Self-Healing Health Checks**: Scan, identify, and bulk-resolve dead links, redirects, changed page titles, stale content, and offline domains
 - **Instapaper Integration**: Automatically saves articles to Instapaper (if configured)
 - **Todoist Integration**: Optionally creates tasks in Todoist for the bookmarks
 - **Things Integration**: Optionally add a to-do to Things (macOS/iOS) via its URL scheme—no API key required
@@ -73,7 +74,7 @@ Bookmarks Bar/
 └── Other/
 ```
 
-### Features
+### Feature Walkthrough
 
 #### Automatic Bookmarking
 When the "Automatically save to bookmarks" option is checked (default), the extension will:
@@ -102,6 +103,32 @@ After analysis, you'll see:
 - **Instapaper Status**: Whether article was saved to Instapaper with a link
 - **Todoist Status**: Whether task was created
 - **Things Status**: Whether the Things link was opened
+
+#### Self-Healing Health Checks
+Keep your bookmark library in pristine condition with a robust, built-in link auditing engine. Accessible via Extension Settings -> **Health Checks**, this system scans your saved bookmarks to detect and resolve five common digital decay issues:
+- **Dead Links**: Detects links returning HTTP `404 Not Found`, `410 Gone`, or other `4xx`/`5xx` error codes.
+- **Domain Gone**: Identifies websites that are offline, have expired domains, or have unreachable servers (connection failures, DNS host resolution errors).
+- **Redirects**: Tracks moved pages by comparing your original bookmark URL with the final landing URL (automatically normalizing trailing slashes and ignoring hash fragments).
+- **Title Changes**: Fetches page headers to extract current webpage titles from `og:title`, `twitter:title`, or `<title>` tags to highlight when bookmark labels have grown out of sync.
+- **Stale Bookmarks**: Flags bookmarks that have not been visited within a customizable threshold (e.g., 365 days), leveraging Chrome's native `dateLastUsed` metadata.
+
+##### Automated Background Scanning & Manual Dashboard
+- **Background Automation**: Set up automatic background checks (**Daily**, **Weekly**, or **Monthly**) using secure browser Alarms. Includes an option to catch up on missed scans on browser startup if your computer was shut down at the scheduled time.
+- **Customizable Scope**: Choose exactly which specific checks (e.g. only dead links and redirects) should run in your automatic settings.
+- **Manual Dashboard**: Launch the **Health Check Manager** to run full bookmark scans on demand, with a live progress bar showing scanned counts in real-time.
+
+##### Safe & Serverless Execution
+- **Strict Rate Limits**: Scans are performed in throttled batches of 5 with a 150ms delay between batches, ensuring the browser is never bogged down and remote websites do not experience rate-limiting issues.
+- **Hanging Protection**: Uses `AbortController` to enforce a strict 12-second timeout per query so lagging hosts won't stall your check.
+- **Privacy-First**: No external servers, middleman databases, or proxies are used. All network connections are opened locally and directly on your device.
+
+##### Single and Bulk Remediation Actions
+The Health Check Dashboard categorizes findings and offers immediate, actionable resolutions:
+- **Update URL**: Instantly swap a redirected link to its modern address.
+- **Update Title**: Sync bookmark titles with the live, retrieved page headers.
+- **Delete Bookmark**: Purge dead links or expired domains instantly (protected by a safety confirmation).
+- **Dismiss**: Silences warnings or stale flags for links you explicitly wish to keep unchanged.
+- **Bulk Actions**: Under any filtered tab, perform one-click batch modifications (e.g., **Delete all dead**, **Fix all redirects**, **Update all titles**, or **Dismiss all stale**) to groom hundreds of bookmarks at once.
 
 ## Configuration
 
