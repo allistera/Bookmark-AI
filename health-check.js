@@ -34,7 +34,7 @@ async function runHealthCheck() {
   startProgressPolling();
 
   try {
-    const result = await sendMessage({ action: 'runHealthCheck' });
+    const result = await chrome.runtime.sendMessage({ action: 'runHealthCheck' });
     stopProgressPolling();
     hideProgress();
     if (result && result.success) {
@@ -302,7 +302,7 @@ function buildActionButtons(entry) {
 // ── Actions ───────────────────────────────────────────────────
 
 async function applyFix(bookmarkId, fixType, newValue) {
-  const result = await sendMessage({ action: 'applyHealthFix', bookmarkId, fixType, newValue });
+  const result = await chrome.runtime.sendMessage({ action: 'applyHealthFix', bookmarkId, fixType, newValue });
   if (result && result.success) {
     await refreshResults();
   } else {
@@ -311,7 +311,7 @@ async function applyFix(bookmarkId, fixType, newValue) {
 }
 
 async function dismiss_(bookmarkId) {
-  await sendMessage({ action: 'dismissHealthIssue', bookmarkId });
+  await chrome.runtime.sendMessage({ action: 'dismissHealthIssue', bookmarkId });
   await refreshResults();
 }
 
@@ -346,7 +346,7 @@ async function bulkFix(fixType) {
   if (ids.length === 0) return;
   if (!confirm(confirmMsg)) return;
 
-  await sendMessage({ action: 'applyBulkFix', fixType, ids });
+  await chrome.runtime.sendMessage({ action: 'applyBulkFix', fixType, ids });
   await refreshResults();
 }
 
@@ -427,18 +427,6 @@ function showError(msg) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────
-
-function sendMessage(msg) {
-  return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage(msg, (response) => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message));
-      } else {
-        resolve(response);
-      }
-    });
-  });
-}
 
 function makeBadge(label, type) {
   const span = document.createElement('span');

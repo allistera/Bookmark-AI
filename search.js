@@ -37,17 +37,6 @@ function timeAgo(timestamp) {
   return `${years}y ago`;
 }
 
-function sendMessage(message) {
-  return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage(message, (response) => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message));
-      } else {
-        resolve(response);
-      }
-    });
-  });
-}
 
 function buildResultCard(entry) {
   const card = document.createElement('div');
@@ -118,7 +107,7 @@ async function handleSearch() {
 
   try {
     showStatus('Searching bookmarks\u2026');
-    const result = await sendMessage({
+    const result = await chrome.runtime.sendMessage({
       action: 'searchBookmarksSemantic',
       semanticIntent: query,
       excludeIds: []
@@ -136,7 +125,7 @@ async function handleSearch() {
 }
 
 async function init() {
-  const result = await sendMessage({ action: 'checkAIConfig' });
+  const result = await chrome.runtime.sendMessage({ action: 'checkAIConfig' });
   if (!result.hasAI) {
     searchBtn.disabled = true;
     searchInput.disabled = true;
@@ -144,11 +133,12 @@ async function init() {
   }
 }
 
-init().then(() => {
+(async () => {
+  await init();
   const params = new URLSearchParams(window.location.search);
   const q = params.get('q');
   if (q) {
     searchInput.value = q;
-    handleSearch();
+    await handleSearch();
   }
-});
+})();

@@ -5,110 +5,102 @@ const BOOKMARK_ROOT_IDS = { ROOT: '0', BAR: '1', OTHER: '2' };
 
 // Listen for messages from popup and health-check page
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'analyzeBookmark') {
-    handleAnalyzeBookmark(request)
-      .then(sendResponse)
-      .catch(error => sendResponse({ success: false, error: error.message }));
-    return true; // Keep channel open for async response
+  const actionsWithResponse = [
+    'analyzeBookmark', 'runHealthCheck', 'getHealthCheckData', 'applyHealthFix',
+    'applyBulkFix', 'dismissHealthIssue', 'setupHealthCheckAlarm', 'parseSearchQuery',
+    'searchBookmarksLocal', 'searchBookmarksSemantic', 'checkAIConfig', 'undoBookmark',
+    'getUnsortedBookmarks', 'getAISuggestion', 'moveBookmark'
+  ];
+
+  if (!actionsWithResponse.includes(request.action)) {
+    return false;
   }
 
-  if (request.action === 'runHealthCheck') {
-    runHealthCheck()
-      .then(result => sendResponse(result))
-      .catch(error => sendResponse({ success: false, error: error.message }));
-    return true;
-  }
+  (async () => {
+    try {
+      switch (request.action) {
+      case 'analyzeBookmark': {
+        const res = await handleAnalyzeBookmark(request);
+        sendResponse(res);
+        break;
+      }
+      case 'runHealthCheck': {
+        const res = await runHealthCheck();
+        sendResponse(res);
+        break;
+      }
+      case 'getHealthCheckData': {
+        const data = await chrome.storage.local.get(['healthCheckResults', 'healthCheckProgress']);
+        sendResponse(data);
+        break;
+      }
+      case 'applyHealthFix': {
+        const res = await applyHealthFix(request.bookmarkId, request.fixType, request.newValue);
+        sendResponse(res);
+        break;
+      }
+      case 'applyBulkFix': {
+        const res = await applyBulkFix(request.fixType, request.ids);
+        sendResponse(res);
+        break;
+      }
+      case 'dismissHealthIssue': {
+        const res = await dismissHealthIssue(request.bookmarkId);
+        sendResponse(res);
+        break;
+      }
+      case 'setupHealthCheckAlarm': {
+        await setupHealthCheckAlarm();
+        sendResponse({ success: true });
+        break;
+      }
+      case 'parseSearchQuery': {
+        const res = await handleParseSearchQuery(request.query);
+        sendResponse(res);
+        break;
+      }
+      case 'searchBookmarksLocal': {
+        const res = await handleLocalBookmarkSearch(request.keywords, request.dateRange);
+        sendResponse(res);
+        break;
+      }
+      case 'searchBookmarksSemantic': {
+        const res = await handleSemanticBookmarkSearch(request.semanticIntent, request.excludeIds);
+        sendResponse(res);
+        break;
+      }
+      case 'checkAIConfig': {
+        const { hasAI } = await getAIConfig();
+        sendResponse({ hasAI });
+        break;
+      }
+      case 'undoBookmark': {
+        await chrome.bookmarks.remove(request.bookmarkId);
+        sendResponse({ success: true });
+        break;
+      }
+      case 'getUnsortedBookmarks': {
+        const bookmarks = await getUnsortedBookmarks();
+        sendResponse({ success: true, bookmarks });
+        break;
+      }
+      case 'getAISuggestion': {
+        const res = await handleGetAISuggestion(request);
+        sendResponse(res);
+        break;
+      }
+      case 'moveBookmark': {
+        const res = await handleMoveBookmark(request);
+        sendResponse(res);
+        break;
+      }
+      }
+    } catch (error) {
+      sendResponse({ success: false, error: error.message });
+    }
+  })();
 
-  if (request.action === 'getHealthCheckData') {
-    chrome.storage.local.get(['healthCheckResults', 'healthCheckProgress'])
-      .then(data => sendResponse(data))
-      .catch(error => sendResponse({ error: error.message }));
-    return true;
-  }
-
-  if (request.action === 'applyHealthFix') {
-    applyHealthFix(request.bookmarkId, request.fixType, request.newValue)
-      .then(sendResponse)
-      .catch(error => sendResponse({ success: false, error: error.message }));
-    return true;
-  }
-
-  if (request.action === 'applyBulkFix') {
-    applyBulkFix(request.fixType, request.ids)
-      .then(sendResponse)
-      .catch(error => sendResponse({ success: false, error: error.message }));
-    return true;
-  }
-
-  if (request.action === 'dismissHealthIssue') {
-    dismissHealthIssue(request.bookmarkId)
-      .then(sendResponse)
-      .catch(error => sendResponse({ success: false, error: error.message }));
-    return true;
-  }
-
-  if (request.action === 'setupHealthCheckAlarm') {
-    setupHealthCheckAlarm()
-      .then(() => sendResponse({ success: true }))
-      .catch(error => sendResponse({ success: false, error: error.message }));
-    return true;
-  }
-
-  if (request.action === 'parseSearchQuery') {
-    handleParseSearchQuery(request.query)
-      .then(sendResponse)
-      .catch(error => sendResponse({ success: false, error: error.message }));
-    return true;
-  }
-
-  if (request.action === 'searchBookmarksLocal') {
-    handleLocalBookmarkSearch(request.keywords, request.dateRange)
-      .then(sendResponse)
-      .catch(error => sendResponse({ success: false, error: error.message }));
-    return true;
-  }
-
-  if (request.action === 'searchBookmarksSemantic') {
-    handleSemanticBookmarkSearch(request.semanticIntent, request.excludeIds)
-      .then(sendResponse)
-      .catch(error => sendResponse({ success: false, error: error.message }));
-    return true;
-  }
-
-  if (request.action === 'checkAIConfig') {
-    getAIConfig()
-      .then(({ hasAI }) => sendResponse({ hasAI }))
-      .catch(() => sendResponse({ hasAI: false }));
-    return true;
-  }
-
-  if (request.action === 'undoBookmark') {
-    chrome.bookmarks.remove(request.bookmarkId)
-      .then(() => sendResponse({ success: true }))
-      .catch(error => sendResponse({ success: false, error: error.message }));
-    return true;
-  }
-
-  if (request.action === 'getUnsortedBookmarks') {
-    getUnsortedBookmarks()
-      .then(bookmarks => sendResponse({ success: true, bookmarks }))
-      .catch(error => sendResponse({ success: false, error: error.message }));
-    return true;
-  }
-
-  if (request.action === 'getAISuggestion') {
-    handleGetAISuggestion(request)
-      .then(sendResponse)
-      .catch(error => sendResponse({ success: false, error: error.message }));
-    return true;
-  }
-
-  if (request.action === 'moveBookmark') {
-    handleMoveBookmark(request)
-      .then(sendResponse)
-      .catch(error => sendResponse({ success: false, error: error.message }));
-    return true;
-  }
+  return true; // Keep channel open for async response
 });
 
 /**
