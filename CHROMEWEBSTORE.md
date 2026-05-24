@@ -1,6 +1,6 @@
 # Chrome Web Store Listing — Bookmark AI
 
-> Last Updated: 2026-05-20
+> Last Updated: 2026-05-24
 
 ## Store Listing
 
@@ -34,12 +34,12 @@ PERMISSIONS
 • "storage" — Required to locally save configurations and API keys in your browser.
 • "contextMenus" — Required to display the right-click shortcut to bookmark pages.
 • "alarms" — Required to schedule periodic, low-priority background scans for link health checks.
-• Host Permissions — Required to securely send text metadata to Anthropic, OpenAI, OpenRouter, Instapaper, or Todoist APIs.
+• Host Permissions — Required to securely send text metadata to Anthropic, OpenAI, Google Gemini, OpenRouter, Instapaper, or Todoist APIs.
 
 SUPPORT
 Found a bug? Have a suggestion? Open an issue on our GitHub repository: https://github.com/allistera/Bookmark-AI
 
-Version 2.2.0 — Added detailed descriptions of link health check tools and updated package versions.
+Version 2.3.0 — Integrated Google Gemini support with custom model configuration (Gemini 2.5 Flash, Gemini 2.5 Pro, Gemini 1.5 Flash, Gemini 1.5 Pro), manifest permissions, settings dashboard tabs, validation checks, and developer documentation updates.
 
 **Category**
 Productivity
@@ -79,6 +79,7 @@ English
 | `alarms` | permissions | Required to schedule periodic, low-priority background scans for the bookmark health-check feature to identify broken, dead, or redirected links. |
 | `https://api.anthropic.com/*` | host_permissions | Required to directly transmit webpage text, URLs, and existing category paths to Anthropic's Claude models for secure, serverless categorization and summarization. |
 | `https://api.openai.com/*` | host_permissions | Required to directly transmit webpage text, URLs, and existing category paths to OpenAI's GPT models for secure, serverless categorization and summarization. |
+| `https://generativelanguage.googleapis.com/*` | host_permissions | Required to directly transmit webpage text, URLs, and existing category paths to Google Gemini's models for secure, serverless categorization and summarization. |
 | `https://www.instapaper.com/*` | host_permissions | Required to securely authenticate and save bookmarked articles directly to the user's Instapaper account when the optional integration is enabled. |
 | `https://api.todoist.com/*` | host_permissions | Required to securely authenticate and create task entries directly in the user's Todoist workspace when the optional integration is enabled. |
 | `https://*/*` | host_permissions | Required to fetch and extract raw webpage HTML/metadata from active web pages, enabling the AI models to categorize pages based on full body content instead of titles alone. |
@@ -95,7 +96,7 @@ English
 | Personally identifiable info | No | No | N/A | No |
 | Health info | No | No | N/A | No |
 | Financial info | No | No | N/A | No |
-| Authentication info | Yes | Yes (Direct to APIs) | Key settings (API tokens, passwords) are stored locally in Chrome storage and transmitted directly to configured APIs (Anthropic, OpenAI, Todoist, Instapaper) to authenticate actions. | No |
+| Authentication info | Yes | Yes (Direct to APIs) | Key settings (API tokens, passwords) are stored locally in Chrome storage and transmitted directly to configured APIs (Anthropic, OpenAI, Gemini, Todoist, Instapaper) to authenticate actions. | No |
 | Personal communications | No | No | N/A | No |
 | Location | No | No | N/A | No |
 | Web history | Yes | Yes (Direct to APIs) | The URL of the webpage being bookmarked is processed locally and transmitted to the selected AI provider to classify the website. | No |
@@ -136,6 +137,7 @@ https://github.com/allistera/Bookmark-AI
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
+| 2.3.0 | 2026-05-24 | Integrated Google Gemini support with model selection (Gemini 2.5 Flash, Gemini 2.5 Pro, Gemini 1.5 Flash, Gemini 1.5 Pro) in Extension settings, validation checks, background worker support, host permissions, and documentation updates. | Draft |
 | 2.2.0 | 2026-05-20 | Bumped version to 2.2.0 to resolve Web Store upload conflicts; expanded Bookmark Health Check feature descriptions in developer README and store listing documentation. | Draft |
 | 2.1.0 | 2026-05-20 | Rebuilt service worker with clean Manifest V3 async/await IIFE routines; completely eliminated legacy callback-to-Promise wrapper utilities across search.js and health-check.js; optimized link health check scanner with robust error handling; updated permissions justifications. | Published |
 | 1.0.0 | 2025-03-15 | Initial public release containing multi-provider AI analysis (Anthropic & OpenRouter), full Chrome bookmarks integration, Instapaper, Todoist, and Cultured Code Things support, and interactive link health diagnostics. | Published |

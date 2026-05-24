@@ -6,6 +6,8 @@ const DEFAULT_SETTINGS = {
   openaiModel: 'gpt-4o',
   openrouterApiKey: '',
   openrouterModel: '',
+  geminiApiKey: '',
+  geminiModel: 'gemini-2.5-flash',
   instapaperUsername: '',
   instapaperPassword: '',
   todoistApiToken: '',
@@ -91,6 +93,7 @@ function updateProviderUI(provider) {
   document.getElementById('anthropicSection').style.display = provider === 'anthropic' ? 'block' : 'none';
   document.getElementById('openaiSection').style.display = provider === 'openai' ? 'block' : 'none';
   document.getElementById('openrouterSection').style.display = provider === 'openrouter' ? 'block' : 'none';
+  document.getElementById('geminiSection').style.display = provider === 'gemini' ? 'block' : 'none';
 }
 
 function renderDomainRules() {
@@ -141,6 +144,8 @@ async function loadSettings() {
     document.getElementById('openaiApiKey').value = settings.openaiApiKey;
     document.getElementById('openaiModel').value = settings.openaiModel || 'gpt-4o';
     document.getElementById('openrouterApiKey').value = settings.openrouterApiKey;
+    document.getElementById('geminiApiKey').value = settings.geminiApiKey || '';
+    document.getElementById('geminiModel').value = settings.geminiModel || 'gemini-2.5-flash';
     document.getElementById('instapaperUsername').value = settings.instapaperUsername;
     document.getElementById('instapaperPassword').value = settings.instapaperPassword;
     document.getElementById('todoistApiToken').value = settings.todoistApiToken;
@@ -248,6 +253,8 @@ async function saveSettings(event) {
   const openaiModel = document.getElementById('openaiModel').value;
   const openrouterApiKey = document.getElementById('openrouterApiKey').value.trim();
   const openrouterModel = document.getElementById('openrouterModel').value;
+  const geminiApiKey = document.getElementById('geminiApiKey').value.trim();
+  const geminiModel = document.getElementById('geminiModel').value;
   const instapaperUsername = document.getElementById('instapaperUsername').value.trim();
   const instapaperPassword = document.getElementById('instapaperPassword').value;
   const todoistApiToken = document.getElementById('todoistApiToken').value.trim();
@@ -280,6 +287,15 @@ async function saveSettings(event) {
       showStatus('Please select an OpenRouter model', 'error');
       return;
     }
+  } else if (currentProvider === 'gemini') {
+    if (!geminiApiKey) {
+      showStatus('Please enter your Gemini API key', 'error');
+      return;
+    }
+    if (!geminiApiKey.startsWith('AIzaSy')) {
+      showStatus('Gemini API key should start with "AIzaSy"', 'error');
+      return;
+    }
   }
 
   const instapaperEnabled = document.getElementById('instapaperEnabled').checked;
@@ -310,6 +326,8 @@ async function saveSettings(event) {
       openaiModel,
       openrouterApiKey,
       openrouterModel,
+      geminiApiKey,
+      geminiModel,
       instapaperUsername,
       instapaperPassword,
       todoistApiToken,

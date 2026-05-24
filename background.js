@@ -258,6 +258,47 @@ async function callAI(prompt, settings, provider, maxTokens = 1024) {
         throw new Error('No content in OpenRouter response');
       }
       return responseText;
+    } else if (provider === 'gemini') {
+      let response;
+      try {
+        const model = settings.geminiModel || 'gemini-2.5-flash';
+        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${settings.geminiApiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: prompt }
+                ]
+              }
+            ],
+            generationConfig: {
+              maxOutputTokens: maxTokens
+            }
+          }),
+          signal: controller.signal
+        });
+      } catch (error) {
+        console.error('Error calling Gemini API:', error);
+        throw new Error(`Failed to call Gemini API: ${error.message}`);
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Gemini API error:', response.status, errorText);
+        throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!responseText) {
+        console.error('No content in Gemini response:', JSON.stringify(data));
+        throw new Error('No content in Gemini response');
+      }
+      return responseText;
     } else {
       let response;
       try {
@@ -583,6 +624,8 @@ async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInsta
       openaiModel: 'gpt-4o',
       openrouterApiKey: '',
       openrouterModel: '',
+      geminiApiKey: '',
+      geminiModel: 'gemini-2.5-flash',
       instapaperUsername: '',
       instapaperPassword: '',
       todoistApiToken: '',
@@ -606,6 +649,10 @@ async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInsta
       }
       if (!settings.openrouterModel || settings.openrouterModel.trim() === '') {
         throw new Error('OpenRouter model not selected. Please select a model in Extension Settings.');
+      }
+    } else if (provider === 'gemini') {
+      if (!settings.geminiApiKey || settings.geminiApiKey.trim() === '') {
+        throw new Error('Gemini API key not configured. Please configure it in Extension Settings.');
       }
     } else {
       if (!settings.anthropicApiKey || settings.anthropicApiKey.trim() === '') {
@@ -893,6 +940,8 @@ async function getAIConfig() {
     openaiModel: 'gpt-4o',
     openrouterApiKey: '',
     openrouterModel: '',
+    geminiApiKey: '',
+    geminiModel: 'gemini-2.5-flash',
     domainRules: []
   });
 
@@ -902,6 +951,8 @@ async function getAIConfig() {
   if (provider === 'openai' && settings.openaiApiKey?.trim()) {
     hasAI = true;
   } else if (provider === 'openrouter' && settings.openrouterApiKey?.trim() && settings.openrouterModel?.trim()) {
+    hasAI = true;
+  } else if (provider === 'gemini' && settings.geminiApiKey?.trim()) {
     hasAI = true;
   } else if (provider === 'anthropic' && settings.anthropicApiKey?.trim()) {
     hasAI = true;

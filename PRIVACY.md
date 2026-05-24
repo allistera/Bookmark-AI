@@ -1,6 +1,6 @@
 # Bookmark AI — Privacy Policy
 
-**Last updated:** March 2025
+**Last updated:** May 2026
 
 Bookmark AI (“the extension”) is a Chrome extension that uses AI to categorize and organize your bookmarks. This policy describes what data the extension uses and where it goes.
 
@@ -16,9 +16,9 @@ The extension has **no backend server**. The developer does not receive, store, 
 
 The extension uses Chrome’s **sync storage** to save only the settings you enter in Extension Settings:
 
-- **AI provider** (Anthropic or OpenRouter)
-- **API keys** (Anthropic API key and/or OpenRouter API key)
-- **OpenRouter model** (if you use OpenRouter)
+- **AI provider** (Anthropic, OpenAI, Gemini, or OpenRouter)
+- **API keys** (Anthropic, OpenAI, Gemini, and/or OpenRouter API keys)
+- **AI models** (if using OpenAI, Gemini, or OpenRouter)
 - **Instapaper** username and password (optional)
 - **Todoist** API token (optional)
 
@@ -40,6 +40,8 @@ When you use a feature, the extension sends the minimum required data **only to 
 This data is sent **only** to the AI provider you chose in settings:
 
 - **Anthropic (Claude)** — [Anthropic Privacy Policy](https://www.anthropic.com/legal/privacy)  
+- **OpenAI (ChatGPT)** — [OpenAI Privacy Policy](https://openai.com/policies/privacy-policy)  
+- **Google Gemini** — [Google Privacy Policy](https://policies.google.com/privacy)  
 - **OpenRouter** — [OpenRouter Privacy Policy](https://openrouter.ai/docs#privacy) (or the provider’s policy for the model you select)
 
 The extension developer does not receive or store this data.
@@ -64,7 +66,7 @@ When you choose “Add to Things,” the extension opens a **things://** URL in 
 - **Storage** — To save your settings (API keys and preferences) in Chrome sync storage.  
 - **Context menu** — To add “Analyze and Bookmark with AI” when you right‑click on a page.  
 - **Host access (all websites)** — To fetch the HTML of the page you are bookmarking (only when needed for AI analysis).  
-- **Anthropic / OpenRouter / Instapaper / Todoist** — To call their APIs when you use those features.
+- **Anthropic / OpenAI / Gemini / OpenRouter / Instapaper / Todoist** — To call their APIs when you use those features.
 
 The extension does not access sites you don’t open or bookmark through the extension.
 

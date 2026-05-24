@@ -25,6 +25,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     openaiModel: 'gpt-4o',
     openrouterApiKey: '',
     openrouterModel: '',
+    geminiApiKey: '',
+    geminiModel: 'gemini-2.5-flash',
     instapaperUsername: '',
     instapaperPassword: '',
     todoistApiToken: '',
@@ -50,6 +52,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     configWarning = 'OpenRouter API key not configured. Open Settings to add it.';
   } else if (provider === 'openrouter' && (!settings.openrouterModel || settings.openrouterModel.trim() === '')) {
     configWarning = 'No OpenRouter model selected. Open Settings to choose one.';
+  } else if (provider === 'gemini' && (!settings.geminiApiKey || settings.geminiApiKey.trim() === '')) {
+    configWarning = 'Gemini API key not configured. Open Settings to add it.';
   }
   if (configWarning) {
     showStatus(configWarning, 'warning');
