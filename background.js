@@ -1,7 +1,27 @@
 const USER_AGENT = 'Mozilla/5.0 (compatible; Bookmark-AI/1.0)';
 
-// Chrome assigns fixed IDs to the built-in bookmark containers
-const BOOKMARK_ROOT_IDS = { ROOT: '0', BAR: '1', OTHER: '2' };
+// Chrome assigns fixed IDs to the built-in bookmark containers, but they can differ by browser/profile
+let BOOKMARK_ROOT_IDS = { ROOT: '0', BAR: '1', OTHER: '2' };
+
+// Dynamically discover root IDs if they differ on this browser or profile
+async function initializeRootIds() {
+  try {
+    const tree = await chrome.bookmarks.getTree();
+    const rootNode = tree[0];
+    if (rootNode && rootNode.children && rootNode.children.length > 0) {
+      // The first child of the root node is typically the Bookmarks Bar / Favorites
+      if (rootNode.children[0]) {
+        BOOKMARK_ROOT_IDS.BAR = rootNode.children[0].id;
+      }
+      // The second child of the root node is typically Other Bookmarks
+      if (rootNode.children[1]) {
+        BOOKMARK_ROOT_IDS.OTHER = rootNode.children[1].id;
+      }
+    }
+  } catch (err) {
+    console.warn('Could not dynamically discover root folder IDs, using defaults:', err);
+  }
+}
 
 // Listen for messages from popup and health-check page
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -108,6 +128,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
  * @returns {Promise<string[]>} Array of folder paths (e.g., "Work/Projects/Web")
  */
 async function getExistingBookmarkFolders() {
+  await initializeRootIds();
   const tree = await chrome.bookmarks.getTree();
   const folders = [];
 
@@ -754,6 +775,7 @@ async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInsta
 // Walks (and creates if needed) the folder hierarchy for categoryPath,
 // returning the ID of the deepest folder.
 async function ensureFolderPath(categoryPath) {
+  await initializeRootIds();
   const segments = categoryPath.split('/').filter(c => c.trim().length > 0);
   let parentId = BOOKMARK_ROOT_IDS.BAR;
   for (const segment of segments) {
@@ -809,9 +831,16 @@ function matchesDomainRule(url, rules) {
  * Bookmarks (i.e. not inside any subfolder). These are the "unsorted" ones.
  */
 async function getUnsortedBookmarks() {
+  await initializeRootIds();
   const [bar, other] = await Promise.all([
-    chrome.bookmarks.getChildren(BOOKMARK_ROOT_IDS.BAR),
-    chrome.bookmarks.getChildren(BOOKMARK_ROOT_IDS.OTHER)
+    chrome.bookmarks.getChildren(BOOKMARK_ROOT_IDS.BAR).catch(e => {
+      console.warn(`Could not read children from Bookmarks Bar (${BOOKMARK_ROOT_IDS.BAR}):`, e);
+      return [];
+    }),
+    chrome.bookmarks.getChildren(BOOKMARK_ROOT_IDS.OTHER).catch(e => {
+      console.warn(`Could not read children from Other Bookmarks (${BOOKMARK_ROOT_IDS.OTHER}):`, e);
+      return [];
+    })
   ]);
   return [...bar, ...other].filter(b => b.url);
 }
@@ -906,6 +935,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
  * @returns {Promise<Object<string, string>>} Map of nodeId -> "Folder/Path"
  */
 async function getFolderPathMap() {
+  await initializeRootIds();
   const tree = await chrome.bookmarks.getTree();
   const map = {};
 
