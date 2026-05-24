@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tab.addEventListener('click', () => {
       document.querySelectorAll('.interval-tab').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
+      triggerAutoSave();
     });
   });
 
@@ -64,12 +65,13 @@ document.addEventListener('DOMContentLoaded', () => {
     tab.addEventListener('click', () => {
       currentProvider = tab.dataset.provider;
       updateProviderUI(currentProvider);
+      triggerAutoSave();
     });
   });
 
   document.getElementById('loadModelsBtn').addEventListener('click', () => loadOpenRouterModels());
 
-  document.getElementById('addRuleBtn').addEventListener('click', () => {
+  document.getElementById('addRuleBtn').addEventListener('click', async () => {
     const domain = document.getElementById('newRuleDomain').value.trim();
     const folder = document.getElementById('newRuleFolder').value.trim();
     if (!domain || !folder) return;
@@ -77,14 +79,37 @@ document.addEventListener('DOMContentLoaded', () => {
     renderDomainRules();
     document.getElementById('newRuleDomain').value = '';
     document.getElementById('newRuleFolder').value = '';
+    await saveSettings(); // Save immediately when a rule is added
+  });
+
+  // Debounced auto-save triggers on form changes
+  const form = document.getElementById('settingsForm');
+  form.addEventListener('input', (e) => {
+    if (e.target.type === 'password' || e.target.type === 'text' || e.target.tagName === 'TEXTAREA') {
+      triggerAutoSave();
+    }
+  });
+  form.addEventListener('change', (e) => {
+    // Only trigger auto-save if it's not a text input (since input event handles that)
+    if (e.target.type !== 'password' && e.target.type !== 'text' && e.target.tagName !== 'TEXTAREA') {
+      triggerAutoSave();
+    }
+  });
+
+  form.addEventListener('submit', (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    saveSettings();
   });
 });
 
-// Handle form submission
-document.getElementById('settingsForm').addEventListener('submit', saveSettings);
-
-// Handle reset button
-document.getElementById('resetBtn').addEventListener('click', resetSettings);
+let autoSaveTimeout = null;
+function triggerAutoSave() {
+  showStatus('Saving changes...', 'loading');
+  clearTimeout(autoSaveTimeout);
+  autoSaveTimeout = setTimeout(async () => {
+    await saveSettings();
+  }, 1200);
+}
 
 function updateProviderUI(provider) {
   document.querySelectorAll('.provider-tab').forEach(tab => {
@@ -94,6 +119,17 @@ function updateProviderUI(provider) {
   document.getElementById('openaiSection').style.display = provider === 'openai' ? 'block' : 'none';
   document.getElementById('openrouterSection').style.display = provider === 'openrouter' ? 'block' : 'none';
   document.getElementById('geminiSection').style.display = provider === 'gemini' ? 'block' : 'none';
+
+  const providerNames = {
+    anthropic: 'Anthropic Claude',
+    openai: 'OpenAI ChatGPT',
+    openrouter: 'OpenRouter',
+    gemini: 'Google Gemini'
+  };
+  const badge = document.getElementById('activeProviderBadge');
+  if (badge) {
+    badge.textContent = providerNames[provider] || provider;
+  }
 }
 
 function renderDomainRules() {
@@ -120,9 +156,10 @@ function renderDomainRules() {
     removeBtn.className = 'btn-remove';
     removeBtn.textContent = '×';
     removeBtn.title = 'Remove rule';
-    removeBtn.addEventListener('click', () => {
+    removeBtn.addEventListener('click', async () => {
       domainRules.splice(idx, 1);
       renderDomainRules();
+      await saveSettings(); // Save immediately when a rule is removed
     });
 
     item.appendChild(domainEl);
@@ -245,8 +282,10 @@ async function loadOpenRouterModels(preselectedModel = null) {
   }
 }
 
-async function saveSettings(event) {
-  event.preventDefault();
+async function saveSettings(event = null) {
+  if (event && event.preventDefault) {
+    event.preventDefault();
+  }
 
   const anthropicApiKey = document.getElementById('anthropicApiKey').value.trim();
   const openaiApiKey = document.getElementById('openaiApiKey').value.trim();
@@ -259,40 +298,24 @@ async function saveSettings(event) {
   const instapaperPassword = document.getElementById('instapaperPassword').value;
   const todoistApiToken = document.getElementById('todoistApiToken').value.trim();
 
-  // Validate based on selected provider
+  // Validate based on selected provider (only flag format errors if keys are not empty)
   if (currentProvider === 'anthropic') {
-    if (!anthropicApiKey) {
-      showStatus('Please enter your Anthropic API key', 'error');
-      return;
-    }
-    if (!anthropicApiKey.startsWith('sk-ant-')) {
+    if (anthropicApiKey && !anthropicApiKey.startsWith('sk-ant-')) {
       showStatus('Anthropic API key should start with "sk-ant-"', 'error');
       return;
     }
   } else if (currentProvider === 'openai') {
-    if (!openaiApiKey) {
-      showStatus('Please enter your OpenAI API key', 'error');
-      return;
-    }
-    if (!openaiApiKey.startsWith('sk-')) {
+    if (openaiApiKey && !openaiApiKey.startsWith('sk-')) {
       showStatus('OpenAI API key should start with "sk-"', 'error');
       return;
     }
   } else if (currentProvider === 'openrouter') {
-    if (!openrouterApiKey) {
-      showStatus('Please enter your OpenRouter API key', 'error');
-      return;
-    }
-    if (!openrouterModel) {
+    if (openrouterApiKey && !openrouterModel) {
       showStatus('Please select an OpenRouter model', 'error');
       return;
     }
   } else if (currentProvider === 'gemini') {
-    if (!geminiApiKey) {
-      showStatus('Please enter your Gemini API key', 'error');
-      return;
-    }
-    if (!geminiApiKey.startsWith('AIzaSy')) {
+    if (geminiApiKey && !geminiApiKey.startsWith('AIzaSy')) {
       showStatus('Gemini API key should start with "AIzaSy"', 'error');
       return;
     }
@@ -359,17 +382,7 @@ async function saveSettings(event) {
   }
 }
 
-async function resetSettings() {
-  try {
-    await chrome.storage.sync.set({ ...DEFAULT_SETTINGS, todoistEnabled: false, thingsEnabled: false });
-    await loadSettings();
-    showStatus('Settings reset to default', 'success');
-    setTimeout(hideStatus, 3000);
-  } catch (error) {
-    console.error('Error resetting settings:', error);
-    showStatus('Error resetting settings: ' + error.message, 'error');
-  }
-}
+
 
 function showStatus(message, type) {
   const statusDiv = document.getElementById('status');

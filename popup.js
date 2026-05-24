@@ -77,10 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     chrome.runtime.openOptionsPage();
   });
 
-  document.getElementById('searchLink').addEventListener('click', (e) => {
-    e.preventDefault();
-    chrome.tabs.create({ url: chrome.runtime.getURL('search.html') });
-  });
+
 
   document.getElementById('inboxLink').addEventListener('click', (e) => {
     e.preventDefault();

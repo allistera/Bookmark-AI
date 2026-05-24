@@ -1,4 +1,4 @@
-let currentFilter = 'issues';
+let currentFilter = 'dead';
 let currentResults = null;
 let pollTimer = null;
 
@@ -103,10 +103,6 @@ async function loadResults() {
 }
 
 function renderSummary(summary, lastRun) {
-  const issueCount = (summary.dead || 0) + (summary.domainGone || 0) +
-    (summary.redirected || 0) + (summary.stale || 0) + (summary.titleChanged || 0);
-
-  document.getElementById('sumIssues').textContent = issueCount;
   document.getElementById('sumDead').textContent = summary.dead || 0;
   document.getElementById('sumDomainGone').textContent = summary.domainGone || 0;
   document.getElementById('sumRedirected').textContent = summary.redirected || 0;

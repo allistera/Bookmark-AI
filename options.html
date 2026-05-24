@@ -282,6 +282,37 @@
       color: #c5221f;
     }
 
+    .status.loading {
+      background: #e8f0fe;
+      color: #1967d2;
+    }
+
+    .active-provider-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #202124;
+      background: #e8f0fe;
+      border: 1px solid rgba(26, 115, 232, 0.15);
+      padding: 10px 16px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+    }
+
+    .active-provider-badge {
+      background: #1a73e8;
+      color: white;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
     .info-card {
       background: #e8f0fe;
       border: none;
@@ -656,6 +687,22 @@
         color: #e8eaed;
       }
 
+      .status.loading {
+        background: #1e3a5f;
+        color: #8ab4f8;
+      }
+
+      .active-provider-indicator {
+        background: #1e3a5f;
+        border-color: rgba(138, 180, 248, 0.2);
+        color: #e8eaed;
+      }
+
+      .active-provider-badge {
+        background: #8ab4f8;
+        color: #1a1a1a;
+      }
+
       .info-card {
         background: #1e3a5f;
       }
@@ -716,6 +763,11 @@
           <span class="badge required">Required</span>
         </div>
         <div class="card-body">
+          <div class="active-provider-indicator">
+            <span>Currently active:</span>
+            <span class="active-provider-badge" id="activeProviderBadge">Anthropic Claude</span>
+          </div>
+
           <div class="provider-tabs">
             <button type="button" class="provider-tab active" data-provider="anthropic">Anthropic Claude</button>
             <button type="button" class="provider-tab" data-provider="openai">ChatGPT</button>
@@ -1093,9 +1145,8 @@
         </div>
       </div>
 
-      <div class="actions">
-        <button type="submit" class="btn btn-primary">Save Settings</button>
-        <button type="button" class="btn btn-secondary" id="resetBtn">Reset</button>
+      <div class="actions" style="display: none;">
+        <button type="submit">Save</button>
       </div>
 
       <div class="status" id="status"></div>
