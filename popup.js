@@ -72,7 +72,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     settings.raindropEnabled && settings.raindropAccessToken?.trim());
 
   document.getElementById('analyzeBtn').addEventListener('click', analyzeAndBookmark);
-  document.getElementById('cancelBtn').addEventListener('click', () => window.close());
   document.getElementById('settingsLink').addEventListener('click', (e) => {
     e.preventDefault();
     chrome.runtime.openOptionsPage();

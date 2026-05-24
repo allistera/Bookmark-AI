@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bookmark AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     * {
       margin: 0;
@@ -13,28 +16,29 @@
 
     body {
       width: 360px;
-      font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: 'Outfit', 'Segoe UI', Roboto, -apple-system, sans-serif;
       font-size: 13px;
       color: #202124;
       background: #fff;
     }
 
+    /* Premium Header */
     .header {
-      padding: 16px;
-      border-bottom: 1px solid #dadce0;
+      padding: 20px 16px 14px;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
     }
 
     .header-icon {
-      width: 32px;
-      height: 32px;
-      background: #1a73e8;
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #1a73e8, #1557b0);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
+      box-shadow: 0 2px 4px rgba(26, 115, 232, 0.2);
     }
 
     .header-icon svg {
@@ -45,59 +49,93 @@
 
     .header-text h1 {
       font-size: 16px;
-      font-weight: 500;
+      font-weight: 600;
       color: #202124;
+      letter-spacing: -0.2px;
     }
 
     .header-text p {
       font-size: 12px;
       color: #5f6368;
-      margin-top: 2px;
+      margin-top: 1px;
     }
 
+    /* Gmail-style Search Section */
     .search-section {
-      padding: 10px 16px;
-      background: #f8f9fa;
-      border-bottom: 1px solid #dadce0;
+      padding: 12px 16px 16px;
+      background: #fff;
+      border-bottom: 1px solid #f1f3f4;
     }
 
-    .search-section input {
+    .gmail-search-bar {
+      display: flex;
+      align-items: center;
+      background: #f1f3f8; /* Gmail soft blue-grey background */
+      border-radius: 28px;
+      padding: 4px 16px;
+      gap: 10px;
+      transition: background 0.15s, box-shadow 0.15s, border-color 0.15s;
+      border: 1px solid transparent;
+      min-height: 48px;
+    }
+
+    .gmail-search-bar:focus-within {
+      background: #fff;
+      border-color: rgba(26, 115, 232, 0.3);
+      box-shadow: 0 1px 3px rgba(60,64,67,0.15), 0 4px 8px 3px rgba(60,64,67,0.08);
+    }
+
+    .search-icon {
+      width: 20px;
+      height: 20px;
+      fill: #5f6368;
+      flex-shrink: 0;
+      transition: fill 0.15s;
+    }
+
+    .gmail-search-bar:focus-within .search-icon {
+      fill: #1a73e8;
+    }
+
+    .gmail-search-bar input {
+      flex: 1;
       width: 100%;
-      padding: 7px 10px;
-      border: 1px solid #dadce0;
-      border-radius: 4px;
+      border: none;
+      background: transparent;
       font-size: 13px;
       font-family: inherit;
       color: #202124;
-      background: #fff;
       outline: none;
-    }
-
-    .search-section input:focus {
-      border-color: #1a73e8;
-    }
-
-    .options-section {
       padding: 8px 0;
-      border-bottom: 1px solid #dadce0;
+    }
+
+    .gmail-search-bar input::placeholder {
+      color: #70757a;
+    }
+
+    /* Options Section with MD3 Switches */
+    .options-section {
+      padding: 6px 0;
+      border-bottom: 1px solid #f1f3f4;
     }
 
     .option-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 12px 16px;
+      padding: 8px 16px;
       cursor: pointer;
-      transition: background 0.1s;
+      transition: background 0.15s;
     }
 
     .option-row:hover {
-      background: #f1f3f4;
+      background: #f8f9fa;
     }
 
     .option-label {
-      font-size: 14px;
-      color: #202124;
+      font-size: 13px;
+      font-weight: 500;
+      color: #3c4043;
     }
 
     .toggle {
@@ -119,48 +157,59 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: #dadce0;
+      background: #e1e2e4;
       border-radius: 10px;
-      transition: 0.2s;
+      transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s;
+      border: 1px solid #74777f;
     }
 
     .toggle-slider:before {
       position: absolute;
       content: "";
-      height: 16px;
-      width: 16px;
-      left: 2px;
-      bottom: 2px;
-      background: white;
+      height: 12px;
+      width: 12px;
+      left: 3px;
+      bottom: 3px;
+      background: #74777f;
       border-radius: 50%;
-      transition: 0.2s;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), width 0.15s, height 0.15s, background-color 0.2s;
     }
 
     .toggle input:checked + .toggle-slider {
       background: #1a73e8;
+      border-color: #1a73e8;
     }
 
     .toggle input:checked + .toggle-slider:before {
       transform: translateX(16px);
+      background: #fff;
+      height: 14px;
+      width: 14px;
+      left: 2px;
+      bottom: 2px;
     }
 
+    /* Premium Pill Buttons */
     .actions {
       padding: 16px;
       display: flex;
-      gap: 8px;
+      gap: 12px;
     }
 
     .btn {
       flex: 1;
-      padding: 8px 16px;
-      border-radius: 4px;
-      font-size: 14px;
-      font-weight: 500;
+      padding: 10px 24px;
+      border-radius: 24px;
+      font-size: 13px;
+      font-weight: 600;
       cursor: pointer;
-      transition: all 0.1s;
+      transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
       border: none;
       font-family: inherit;
+    }
+
+    .btn:active:not(:disabled) {
+      transform: scale(0.97);
     }
 
     .btn-primary {
@@ -170,12 +219,12 @@
 
     .btn-primary:hover:not(:disabled) {
       background: #1557b0;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      box-shadow: 0 2px 4px rgba(26, 115, 232, 0.25);
     }
 
     .btn-primary:disabled {
-      background: #dadce0;
-      color: #80868b;
+      background: #f1f3f4;
+      color: #9aa0a6;
       cursor: not-allowed;
     }
 
@@ -190,17 +239,19 @@
       border-color: #1a73e8;
     }
 
+    /* Status Section */
     .status-section {
       padding: 0 16px 16px;
     }
 
     .status {
-      padding: 12px;
-      border-radius: 8px;
+      padding: 12px 14px;
+      border-radius: 12px;
       font-size: 13px;
+      font-weight: 500;
       display: flex;
-      align-items: flex-start;
-      gap: 8px;
+      align-items: center;
+      gap: 10px;
     }
 
     .status-icon {
@@ -238,9 +289,11 @@
       color: #b05a00;
     }
 
+    /* Premium Results Panels */
     .results-section {
       display: none;
-      border-top: 1px solid #dadce0;
+      border-top: 1px solid #f1f3f4;
+      background: #fafafa;
     }
 
     .results-section.visible {
@@ -248,7 +301,7 @@
     }
 
     .result-item {
-      padding: 12px 16px;
+      padding: 14px 16px;
       border-bottom: 1px solid #f1f3f4;
     }
 
@@ -257,11 +310,12 @@
     }
 
     .result-label {
-      font-size: 11px;
-      color: #5f6368;
+      font-size: 10px;
+      font-weight: 600;
+      color: #80868b;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 4px;
+      letter-spacing: 0.8px;
+      margin-bottom: 6px;
     }
 
     .result-value {
@@ -272,12 +326,13 @@
 
     .result-value.path {
       font-family: 'Roboto Mono', monospace;
-      font-size: 12px;
+      font-size: 11px;
       background: #e8f0fe;
       color: #1967d2;
-      padding: 6px 10px;
-      border-radius: 4px;
+      padding: 4px 10px;
+      border-radius: 12px;
       display: inline-block;
+      border: 1px solid rgba(25, 103, 210, 0.12);
     }
 
     .tags {
@@ -288,27 +343,12 @@
     }
 
     .tag {
-      background: #e8f0fe;
-      color: #1967d2;
-      padding: 4px 8px;
-      border-radius: 4px;
+      background: #f1f3f4;
+      color: #5f6368;
+      padding: 3px 8px;
+      border-radius: 12px;
       font-size: 11px;
-    }
-
-    .footer {
-      padding: 12px 16px;
-      border-top: 1px solid #dadce0;
-      text-align: center;
-    }
-
-    .footer a {
-      color: #1a73e8;
-      text-decoration: none;
-      font-size: 12px;
-    }
-
-    .footer a:hover {
-      text-decoration: underline;
+      font-weight: 500;
     }
 
     .integration-status {
@@ -331,14 +371,59 @@
       background: #ea4335;
     }
 
+    /* Pipe-less Modern Navigation Footer */
+    .footer {
+      padding: 12px 16px;
+      border-top: 1px solid #f1f3f4;
+      display: flex;
+      justify-content: space-around;
+      background: #f8f9fa;
+      align-items: center;
+    }
+
+    .footer a {
+      color: #5f6368;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 600;
+      transition: color 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .footer a:hover {
+      color: #1a73e8;
+    }
+
+    .settings-cog {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      transition: background-color 0.15s;
+    }
+
+    .settings-cog:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    .cog-icon {
+      width: 18px;
+      height: 18px;
+      fill: #5f6368;
+      transition: fill 0.15s, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .settings-cog:hover .cog-icon {
+      fill: #1a73e8;
+      transform: rotate(45deg);
+    }
+
+    /* Premium Dark Mode Styles */
     @media (prefers-color-scheme: dark) {
       body {
         background: #1a1a1a;
         color: #e8eaed;
-      }
-
-      .header {
-        border-bottom-color: #3d3d3d;
       }
 
       .header-text h1 {
@@ -350,18 +435,29 @@
       }
 
       .search-section {
-        background: #242424;
+        background: #1a1a1a;
         border-bottom-color: #3d3d3d;
       }
 
-      .search-section input {
-        background: #333333;
-        color: #e8eaed;
-        border-color: #3d3d3d;
+      .gmail-search-bar {
+        background: #2d2d2d;
       }
 
-      .search-section input:focus {
-        border-color: #8ab4f8;
+      .gmail-search-bar:focus-within {
+        background: #242424;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.5), 0 4px 8px 3px rgba(0,0,0,0.3);
+      }
+
+      .search-icon {
+        fill: #9aa0a6;
+      }
+
+      .gmail-search-bar input {
+        color: #e8eaed;
+      }
+
+      .gmail-search-bar input::placeholder {
+        color: #80868b;
       }
 
       .options-section {
@@ -369,7 +465,7 @@
       }
 
       .option-row:hover {
-        background: #3d3d3d;
+        background: #242424;
       }
 
       .option-label {
@@ -378,6 +474,23 @@
 
       .toggle-slider {
         background: #3d3d3d;
+      }
+
+      .toggle-slider:before {
+        background: #9aa0a6;
+      }
+
+      .toggle input:checked + .toggle-slider {
+        background: #8ab4f8;
+      }
+
+      .toggle input:checked + .toggle-slider:before {
+        background: #1a1a1a;
+      }
+
+      .btn-primary:disabled {
+        background: #2d2d2d;
+        color: #6e6e6e;
       }
 
       .btn-secondary {
@@ -389,45 +502,6 @@
       .btn-secondary:hover {
         background: #3d3d3d;
         border-color: #8ab4f8;
-      }
-
-      .btn-primary:disabled {
-        background: #3d3d3d;
-        color: #6e6e6e;
-      }
-
-      .results-section {
-        border-top-color: #3d3d3d;
-      }
-
-      .result-item {
-        border-bottom-color: #3d3d3d;
-      }
-
-      .result-label {
-        color: #9aa0a6;
-      }
-
-      .result-value {
-        color: #e8eaed;
-      }
-
-      .result-value.path {
-        background: #1e3a5f;
-        color: #8ab4f8;
-      }
-
-      .tag {
-        background: #1e3a5f;
-        color: #8ab4f8;
-      }
-
-      .footer {
-        border-top-color: #3d3d3d;
-      }
-
-      .footer a {
-        color: #8ab4f8;
       }
 
       .status.loading {
@@ -449,10 +523,64 @@
         background: #3d2e00;
         color: #fdd663;
       }
+
+      .results-section {
+        border-top-color: #3d3d3d;
+        background: #202020;
+      }
+
+      .result-item {
+        border-bottom-color: #3d3d3d;
+      }
+
+      .result-label {
+        color: #9aa0a6;
+      }
+
+      .result-value {
+        color: #e8eaed;
+      }
+
+      .result-value.path {
+        background: #1e3a5f;
+        color: #8ab4f8;
+        border-color: rgba(138, 180, 248, 0.15);
+      }
+
+      .tag {
+        background: #2d2d2d;
+        color: #9aa0a6;
+      }
+
+      .footer {
+        border-top-color: #3d3d3d;
+        background: #1a1a1a;
+      }
+
+      .footer a {
+        color: #9aa0a6;
+      }
+
+      .footer a:hover {
+        color: #8ab4f8;
+      }
+
+      .settings-cog:hover {
+        background-color: rgba(255, 255, 255, 0.08);
+      }
+
+      .cog-icon {
+        fill: #9aa0a6;
+      }
+
+      .settings-cog:hover .cog-icon {
+        fill: #8ab4f8;
+      }
     }
   </style>
 </head>
 <body>
+  <!-- Header -->
   <div class="header">
     <div class="header-icon">
       <svg viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
@@ -463,10 +591,17 @@
     </div>
   </div>
 
+  <!-- Gmail-style Pill Search Bar -->
   <div class="search-section">
-    <input type="text" id="searchInput" placeholder="Show me all my bookmarks about drones">
+    <div class="gmail-search-bar">
+      <svg class="search-icon" viewBox="0 0 24 24">
+        <path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5 5.5-2.5-5.5-2.5zm7.5 5l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 14.5z"/>
+      </svg>
+      <input type="text" id="searchInput" placeholder="Show me all my bookmarks about drones">
+    </div>
   </div>
 
+  <!-- Options List with Material Switches -->
   <div class="options-section">
     <label class="option-row" for="autoBookmark">
       <span class="option-label">Auto-save to bookmarks</span>
@@ -512,13 +647,15 @@
     </label>
   </div>
 
+  <!-- Action Buttons -->
   <div class="actions">
     <button class="btn btn-primary" id="analyzeBtn">Analyze & Save</button>
-    <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
   </div>
 
+  <!-- Status Alert Area -->
   <div class="status-section" id="statusContainer"></div>
 
+  <!-- AI Results Card -->
   <div class="results-section" id="results">
     <div class="result-item" id="matchedCategoryContainer">
       <div class="result-label">Saved to</div>
@@ -571,14 +708,16 @@
     </div>
   </div>
 
+  <!-- Nav Footer Bar (Pipe-less) -->
   <div class="footer">
     <a href="#" id="searchLink">Search</a>
-    <span style="color:#dadce0">|</span>
     <a href="#" id="inboxLink">Inbox</a>
-    <span style="color:#dadce0">|</span>
-    <a href="#" id="settingsLink">Settings</a>
-    <span style="color:#dadce0">|</span>
     <a href="#" id="healthCheckLink">Health Check</a>
+    <a href="#" id="settingsLink" class="settings-cog" title="Settings">
+      <svg class="cog-icon" viewBox="0 0 24 24">
+        <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+      </svg>
+    </a>
   </div>
 
   <script src="popup.js"></script>
