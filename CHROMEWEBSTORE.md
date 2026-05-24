@@ -39,7 +39,7 @@ PERMISSIONS
 SUPPORT
 Found a bug? Have a suggestion? Open an issue on our GitHub repository: https://github.com/allistera/Bookmark-AI
 
-Version 2.3.1 — Patch release fixing "Can't find bookmark for id" errors on launch/inbox load in certain browser environments (Arc, Edge, or customized Chrome profiles) by introducing dynamic root folder discovery and robust error handling. Implements Google Gemini support and flags config settings.
+Version 2.3.2 — Added "Delete Bookmark" feature to the Bookmark Inbox, allowing direct, permanent removal of unsorted links with standard confirm modals. Includes dynamic root folder discovery and Google Gemini API integration.
 
 **Category**
 Productivity
@@ -137,6 +137,7 @@ https://github.com/allistera/Bookmark-AI
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
+| 2.3.2 | 2026-05-24 | Added "Delete Bookmark" support directly in the Bookmark Inbox interface, including modal confirmation, safe removal, and automatic list refreshing. | Draft |
 | 2.3.1 | 2026-05-24 | Fixed critical "Can't find bookmark for id" errors on launch/inbox load in customized profiles and other browsers (Edge/Arc) by dynamically resolving root folder IDs and wrapping getChildren in safe error-catch blocks. | Draft |
 | 2.3.0 | 2026-05-24 | Integrated Google Gemini support with model selection (Gemini 2.5 Flash, Gemini 2.5 Pro, Gemini 1.5 Flash, Gemini 1.5 Pro) in Extension settings, validation checks, background worker support, host permissions, and documentation updates. | Draft |
 | 2.2.0 | 2026-05-20 | Bumped version to 2.2.0 to resolve Web Store upload conflicts; expanded Bookmark Health Check feature descriptions in developer README and store listing documentation. | Draft |

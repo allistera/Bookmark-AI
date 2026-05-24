@@ -133,6 +133,14 @@
     .row-status.done     { color: #137333; font-weight: 500; }
     .row-status.error    { color: #c5221f; }
 
+    .btn-danger {
+      background: #ea4335;
+      color: #fff;
+    }
+    .btn-danger:not(:disabled):hover {
+      background: #c5221f;
+    }
+
     .empty-state {
       padding: 48px 24px;
       text-align: center;
@@ -150,7 +158,8 @@
         <p>Bookmarks sitting directly on your Bookmarks Bar or Other Bookmarks, not in any folder.</p>
       </div>
       <div class="header-actions">
-        <button id="analyzeBtn" class="btn btn-primary" disabled>Analyze All</button>
+        <button id="analyzeBtn" class="btn btn-primary" disabled>Analyze Selected</button>
+        <button id="deleteSelectedBtn" class="btn btn-danger" disabled style="display:none">Delete Selected (0)</button>
         <button id="applyBtn"   class="btn btn-secondary" style="display:none">Move Selected (0)</button>
       </div>
     </div>

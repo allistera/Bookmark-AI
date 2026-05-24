@@ -29,7 +29,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     'analyzeBookmark', 'runHealthCheck', 'getHealthCheckData', 'applyHealthFix',
     'applyBulkFix', 'dismissHealthIssue', 'setupHealthCheckAlarm', 'parseSearchQuery',
     'searchBookmarksLocal', 'searchBookmarksSemantic', 'checkAIConfig', 'undoBookmark',
-    'getUnsortedBookmarks', 'getAISuggestion', 'moveBookmark'
+    'getUnsortedBookmarks', 'getAISuggestion', 'moveBookmark', 'deleteBookmark'
   ];
 
   if (!actionsWithResponse.includes(request.action)) {
@@ -95,6 +95,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         break;
       }
       case 'undoBookmark': {
+        await chrome.bookmarks.remove(request.bookmarkId);
+        sendResponse({ success: true });
+        break;
+      }
+      case 'deleteBookmark': {
         await chrome.bookmarks.remove(request.bookmarkId);
         sendResponse({ success: true });
         break;

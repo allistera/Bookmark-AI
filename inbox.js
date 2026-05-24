@@ -5,16 +5,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Delegated listener — handles all checkbox changes without per-row binding
   document.getElementById('bookmarkRows').addEventListener('change', (e) => {
-    if (e.target.classList.contains('bm-cb')) updateApplyCount();
+    if (e.target.classList.contains('bm-cb')) updateButtonCounts();
   });
 
-  document.getElementById('analyzeBtn').addEventListener('click', analyzeAll);
+  document.getElementById('analyzeBtn').addEventListener('click', analyzeSelected);
+  document.getElementById('deleteSelectedBtn').addEventListener('click', deleteSelected);
   document.getElementById('applyBtn').addEventListener('click', applySelected);
   document.getElementById('selectAll').addEventListener('change', (e) => {
     document.querySelectorAll('.bm-cb').forEach(cb => {
       if (!cb.disabled) cb.checked = e.target.checked;
     });
-    updateApplyCount();
+    updateButtonCounts();
   });
 });
 
@@ -33,12 +34,15 @@ async function loadUnsortedBookmarks() {
   bookmarks = response.bookmarks;
   if (bookmarks.length === 0) {
     showAlert('All bookmarks are already organized — nothing to sort!', 'success');
+    document.getElementById('tableCard').style.display = 'none';
+    document.getElementById('deleteSelectedBtn').style.display = 'none';
     return;
   }
-  showAlert(`Found ${bookmarks.length} unsorted bookmark${bookmarks.length !== 1 ? 's' : ''}. Click "Analyze All" to get AI folder suggestions.`, 'info');
+  showAlert(`Found ${bookmarks.length} unsorted bookmark${bookmarks.length !== 1 ? 's' : ''}. Click "Analyze Selected" to get AI folder suggestions.`, 'info');
   renderTable();
-  document.getElementById('analyzeBtn').disabled = false;
   document.getElementById('tableCard').style.display = '';
+  document.getElementById('deleteSelectedBtn').style.display = '';
+  updateButtonCounts();
 }
 
 function renderTable() {
@@ -90,25 +94,46 @@ function renderTable() {
   });
 }
 
-async function analyzeAll() {
+async function analyzeSelected() {
+  const checked = [...document.querySelectorAll('.bm-cb:checked')];
+  if (checked.length === 0) {
+    showAlert('No bookmarks selected.', 'info');
+    return;
+  }
+
   const btn = document.getElementById('analyzeBtn');
   btn.disabled = true;
   btn.textContent = 'Analyzing…';
-  showAlert(`Analyzing ${bookmarks.length} bookmarks…`, 'loading');
+  showAlert(`Analyzing ${checked.length} bookmarks…`, 'loading');
 
   // Process in batches of 5 to avoid overwhelming the AI API
   const BATCH = 5;
-  for (let i = 0; i < bookmarks.length; i += BATCH) {
+  for (let i = 0; i < checked.length; i += BATCH) {
     await Promise.all(
-      bookmarks.slice(i, i + BATCH).map((bm, j) => analyzeOne(bm, i + j))
+      checked.slice(i, i + BATCH).map(async (cb) => {
+        const idx = parseInt(cb.dataset.idx);
+        const bm = bookmarks[idx];
+        await analyzeOne(bm, idx);
+      })
     );
   }
 
-  btn.textContent = 'Re-analyze';
+  btn.textContent = 'Analyze Selected';
   btn.disabled = false;
-  showAlert('Analysis complete. Review suggestions and click "Move Selected" to apply.', 'success');
-  document.getElementById('applyBtn').style.display = '';
-  updateApplyCount();
+
+  // Automate organizing successfully analyzed bookmarks
+  const successfullyAnalyzed = checked.filter(cb => {
+    const bm = bookmarks[parseInt(cb.dataset.idx)];
+    return bm && bm.suggestedFolder;
+  });
+
+  if (successfullyAnalyzed.length > 0) {
+    showAlert(`Analysis complete. Automatically organizing ${successfullyAnalyzed.length} bookmark(s) into suggested folders…`, 'loading');
+    await applySelected();
+  } else {
+    showAlert('Analysis complete, but no folder suggestions were generated.', 'error');
+    updateButtonCounts();
+  }
 }
 
 async function analyzeOne(bm, idx) {
@@ -199,9 +224,9 @@ async function applySelected() {
     }
   }
 
-  btn.disabled = false;
-  updateApplyCount();
-  showAlert('Done moving selected bookmarks.', 'success');
+  if (btn) btn.disabled = false;
+  await loadUnsortedBookmarks();
+  showAlert('Done automatically organizing bookmarks.', 'success');
 }
 
 function setStatus(idx, state, text) {
@@ -211,9 +236,53 @@ function setStatus(idx, state, text) {
   el.textContent = text;
 }
 
-function updateApplyCount() {
-  const count = document.querySelectorAll('.bm-cb:checked').length;
+async function deleteSelected() {
+  const checked = [...document.querySelectorAll('.bm-cb:checked')];
+  const toDelete = checked.map(cb => {
+    const idx = parseInt(cb.dataset.idx);
+    return { cb, idx, bm: bookmarks[idx] };
+  }).filter(item => item.bm);
+
+  if (toDelete.length === 0) {
+    showAlert('No bookmarks selected for deletion.', 'info');
+    return;
+  }
+
+  if (confirm(`Are you sure you want to delete ${toDelete.length} selected bookmark(s)?`)) {
+    const btn = document.getElementById('deleteSelectedBtn');
+    btn.disabled = true;
+
+    for (const item of toDelete) {
+      setStatus(item.idx, 'moving', 'Deleting…');
+      try {
+        const response = await chrome.runtime.sendMessage({
+          action: 'deleteBookmark',
+          bookmarkId: item.bm.id
+        });
+        if (response.success) {
+          item.cb.checked = false;
+          item.cb.disabled = true;
+          setStatus(item.idx, 'done', 'Deleted');
+        } else {
+          setStatus(item.idx, 'error', 'Failed: ' + response.error);
+        }
+      } catch (e) {
+        setStatus(item.idx, 'error', 'Failed: ' + e.message);
+      }
+    }
+
+    btn.disabled = false;
+    await loadUnsortedBookmarks();
+  }
+}
+
+function updateButtonCounts() {
+  const checked = document.querySelectorAll('.bm-cb:checked');
+  const count = checked.length;
   document.getElementById('applyBtn').textContent = `Move Selected (${count})`;
+  document.getElementById('deleteSelectedBtn').textContent = `Delete Selected (${count})`;
+  document.getElementById('deleteSelectedBtn').disabled = count === 0;
+  document.getElementById('analyzeBtn').disabled = count === 0;
 }
 
 function showAlert(msg, type) {
