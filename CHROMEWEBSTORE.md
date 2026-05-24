@@ -8,47 +8,44 @@
 Bookmark AI
 
 **Short Description**
-AI-powered bookmark organizer that automatically categorizes, summarizes, and structures bookmarks using Claude or OpenAI.
+Automatically organizes, categorizes, and summarizes your browser bookmarks using AI.
 
 **Detailed Description**
-Save time and clean up your digital chaos. Bookmark AI is an intelligent assistant that automatically categorizes, summarizes, and organizes your browser bookmarks into a structured hierarchy using state-of-the-art AI.
+Automatically organizes webpage bookmarks into structured folders using AI-powered analysis.
 
-Rather than dumping links into a single unorganized folder, Bookmark AI analyzes the webpage content, reads your existing Chrome bookmark structure, and dynamically places the bookmark into the most relevant folder. If a suitable folder does not exist, it intelligently suggests and creates one for you.
+FEATURES
+• Automated Organization — Analyzes page context using Claude, GPT-4, or OpenRouter to file bookmarks into relevant folders.
+• Context Summaries — Generates brief webpage summaries and stores them in the bookmark description.
+• Link Health Audits — Scans your bookmarks to identify broken links, redirects, changed webpage titles, and unvisited stale bookmarks.
+• Direct Integrations — Syncs links to Todoist tasks, Instapaper, Readwise, Raindrop, or macOS/iOS Things.
+• Context Menu Support — Bookmark any page or link directly via the right-click context menu.
 
-Key Features:
-* Automated AI Organization: Uses Anthropic (Claude) or OpenRouter (GPT-4, Llama, Gemini) to analyze and structure links.
-* Context-Aware Summaries: Extracts and stores brief webpage summaries directly in the bookmark description.
-* Deep Integrations: Automatically syncs saved links to your favorite productivity tools, including Instapaper (for articles), Todoist (for tasks), and Cultured Code Things (for macOS/iOS to-dos).
-* Right-Click Context Menu: Instant bookmarking from any link or page via the right-click menu.
-* Self-Healing Health Checks: Scan, identify, and bulk-resolve dead links (HTTP 404/5xx), redirected URLs, changed webpage titles, stale unvisited bookmarks, and unreachable offline domains automatically.
+HOW TO USE
+1. Click the Bookmark AI icon in the toolbar.
+2. Select your integration choices (e.g., Todoist, Instapaper, or Things).
+3. Click "Analyze & Save" to organize and summarize the bookmark.
 
-Self-Healing Bookmark Health Checks:
-Websites change, pages move, and domains expire. Bookmark AI includes a sophisticated, privacy-respecting link checker built directly into your browser:
-* Dead & Expired Links: Flags broken HTTP statuses (404, 410, 500) and completely unreachable or defunct domains.
-* Smart Redirect Fixer: Detects permanent/temporary page transfers and updates your bookmark URLs in one click.
-* Title Synchronizer: Inspects HTML headers to retrieve live page titles and offers to update your bookmark labels to match.
-* Declutter Stale Links: Flags bookmarks that have sat unvisited past a user-configured threshold (e.g., 365 days).
-* Automatic Scheduling: Runs background scans on a Daily, Weekly, or Monthly alarm, with missed scan catch-up on browser startup.
-* Interactive Dashboard & Bulk Actions: Filter issues by category and apply one-click bulk operations to fix all redirects, update all titles, or purge all dead links simultaneously.
-* Safe & Gentle Scanning: Throttles checks in small batches of 5 with 150ms pauses and 12-second timeouts to protect your local bandwidth and respect remote server limits.
+PRIVACY
+Bookmark AI is a serverless, local-first extension. All API keys and settings are stored locally in your browser. Webpage content and metadata are sent directly to your chosen AI provider for classification and are never shared with any other third party.
 
-How to Use:
-1. Navigate to any webpage you want to bookmark.
-2. Click the Bookmark AI toolbar icon or right-click any page or link and choose "Analyze and Bookmark with AI".
-3. Choose your integrations (e.g., Save to Instapaper, Create task in Todoist, or Add to Things).
-4. Click "Analyze & Save". Watch the AI categorize, summarize, and file your bookmark cleanly.
+PERMISSIONS
+• "bookmarks" — Required to read your folder tree and automatically file or update bookmarks.
+• "activeTab" — Required to temporarily retrieve the URL and title of the active tab for categorization when clicked.
+• "storage" — Required to locally save configurations and API keys in your browser.
+• "contextMenus" — Required to display the right-click shortcut to bookmark pages.
+• "alarms" — Required to schedule periodic, low-priority background scans for link health checks.
+• Host Permissions — Required to securely send text metadata to Anthropic, OpenAI, OpenRouter, Instapaper, or Todoist APIs.
 
-Privacy & Local First:
-Bookmark AI operates with no middleman backend servers. All API tokens, configuration settings, and credentials are saved locally in your Chrome secure storage and transmitted directly to your selected API endpoints (Anthropic, OpenRouter, Todoist, and Instapaper). Your data stays entirely in your control.
+SUPPORT
+Found a bug? Have a suggestion? Open an issue on our GitHub repository: https://github.com/allistera/Bookmark-AI
 
-Support & Feedback:
-For issues, bug reports, and features, visit the open-source repository at https://github.com/allistera/Bookmark-AI.
+Version 2.2.0 — Added detailed descriptions of link health check tools and updated package versions.
 
 **Category**
 Productivity
 
 **Single Purpose**
-Uses artificial intelligence to automatically categorize, summarize, and organize webpage bookmarks into structured folders.
+Automatically organizes bookmarks into structured folders using AI analysis.
 
 **Primary Language**
 English

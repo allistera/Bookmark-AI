@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Bookmark AI",
   "version": "2.2.0",
-  "description": "AI-powered bookmark organizer that automatically categorizes and saves bookmarks",
+  "description": "Automatically organizes, categorizes, and summarizes your browser bookmarks using AI",
   "permissions": [
     "bookmarks",
     "activeTab",

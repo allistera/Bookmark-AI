@@ -148,13 +148,19 @@ async function getExistingBookmarkFolders() {
  * Fetches the HTML content of a URL for analysis
  */
 async function fetchHtmlContent(url) {
+  const TIMEOUT_MS = 10000; // 10 seconds timeout
   try {
     console.log(`Fetching HTML content for: ${url}`);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
     const response = await fetch(url, {
       headers: {
         'User-Agent': USER_AGENT
-      }
+      },
+      signal: controller.signal
     });
+    clearTimeout(timer);
 
     if (!response.ok) {
       console.error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
@@ -177,109 +183,120 @@ async function fetchHtmlContent(url) {
  * @returns {Promise<string>} Raw response text from the AI
  */
 async function callAI(prompt, settings, provider, maxTokens = 1024) {
-  if (provider === 'openai') {
-    let response;
-    try {
-      response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${settings.openaiApiKey}`
-        },
-        body: JSON.stringify({
-          model: settings.openaiModel || 'gpt-4o',
-          max_tokens: maxTokens,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      });
-    } catch (error) {
-      console.error('Error calling OpenAI API:', error);
-      throw new Error(`Failed to call OpenAI API: ${error.message}`);
-    }
+  const TIMEOUT_MS = 25000; // 25 seconds timeout
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenAI API error:', response.status, errorText);
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
-    }
+  try {
+    if (provider === 'openai') {
+      let response;
+      try {
+        response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${settings.openaiApiKey}`
+          },
+          body: JSON.stringify({
+            model: settings.openaiModel || 'gpt-4o',
+            max_tokens: maxTokens,
+            messages: [{ role: 'user', content: prompt }]
+          }),
+          signal: controller.signal
+        });
+      } catch (error) {
+        console.error('Error calling OpenAI API:', error);
+        throw new Error(`Failed to call OpenAI API: ${error.message}`);
+      }
 
-    const message = await response.json();
-    const responseText = message.choices?.[0]?.message?.content;
-    if (!responseText) {
-      console.error('No content in OpenAI response:', JSON.stringify(message));
-      throw new Error('No content in OpenAI response');
-    }
-    return responseText;
-  } else if (provider === 'openrouter') {
-    let response;
-    try {
-      response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${settings.openrouterApiKey}`,
-          'HTTP-Referer': 'https://github.com/bookmark-ai',
-          'X-Title': 'Bookmark AI'
-        },
-        body: JSON.stringify({
-          model: settings.openrouterModel,
-          max_tokens: maxTokens,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      });
-    } catch (error) {
-      console.error('Error calling OpenRouter API:', error);
-      throw new Error(`Failed to call OpenRouter API: ${error.message}`);
-    }
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('OpenAI API error:', response.status, errorText);
+        throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+      }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenRouter API error:', response.status, errorText);
-      throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
-    }
+      const message = await response.json();
+      const responseText = message.choices?.[0]?.message?.content;
+      if (!responseText) {
+        console.error('No content in OpenAI response:', JSON.stringify(message));
+        throw new Error('No content in OpenAI response');
+      }
+      return responseText;
+    } else if (provider === 'openrouter') {
+      let response;
+      try {
+        response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${settings.openrouterApiKey}`,
+            'HTTP-Referer': 'https://github.com/bookmark-ai',
+            'X-Title': 'Bookmark AI'
+          },
+          body: JSON.stringify({
+            model: settings.openrouterModel,
+            max_tokens: maxTokens,
+            messages: [{ role: 'user', content: prompt }]
+          }),
+          signal: controller.signal
+        });
+      } catch (error) {
+        console.error('Error calling OpenRouter API:', error);
+        throw new Error(`Failed to call OpenRouter API: ${error.message}`);
+      }
 
-    const message = await response.json();
-    const responseText = message.choices?.[0]?.message?.content;
-    if (!responseText) {
-      console.error('No content in OpenRouter response:', JSON.stringify(message));
-      throw new Error('No content in OpenRouter response');
-    }
-    return responseText;
-  } else {
-    let response;
-    try {
-      response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': settings.anthropicApiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: maxTokens,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      });
-    } catch (error) {
-      console.error('Error calling Anthropic API:', error);
-      throw new Error(`Failed to call Claude AI: ${error.message}`);
-    }
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('OpenRouter API error:', response.status, errorText);
+        throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+      }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Anthropic API error:', response.status, errorText);
-      throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
-    }
+      const message = await response.json();
+      const responseText = message.choices?.[0]?.message?.content;
+      if (!responseText) {
+        console.error('No content in OpenRouter response:', JSON.stringify(message));
+        throw new Error('No content in OpenRouter response');
+      }
+      return responseText;
+    } else {
+      let response;
+      try {
+        response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': settings.anthropicApiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: maxTokens,
+            messages: [{ role: 'user', content: prompt }]
+          }),
+          signal: controller.signal
+        });
+      } catch (error) {
+        console.error('Error calling Anthropic API:', error);
+        throw new Error(`Failed to call Claude AI: ${error.message}`);
+      }
 
-    const message = await response.json();
-    const textContent = message.content.find(block => block.type === 'text');
-    if (!textContent) {
-      console.error('No text content in Claude response. Response:', JSON.stringify(message.content));
-      throw new Error('No text content in Claude response');
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Anthropic API error:', response.status, errorText);
+        throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
+      }
+
+      const message = await response.json();
+      const textContent = message.content.find(block => block.type === 'text');
+      if (!textContent) {
+        console.error('No text content in Claude response. Response:', JSON.stringify(message.content));
+        throw new Error('No text content in Claude response');
+      }
+      return textContent.text;
     }
-    return textContent.text;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -304,9 +321,14 @@ async function analyzeBookmark(url, settings, provider, providedTitle) {
   // Build the category matching section of the prompt
   let categorySection = '';
   if (existingFolders.length > 0) {
+    // Limit folders passed to the AI to prevent excessive context size or request timeouts
+    let foldersToSuggest = existingFolders;
+    if (foldersToSuggest.length > 100) {
+      foldersToSuggest = foldersToSuggest.slice(0, 100);
+    }
     categorySection = `
 Additionally, if this is NOT an article, you MUST match it to exactly ONE category - the single best match from the user's existing bookmark folders:
-${existingFolders.join('\n')}
+${foldersToSuggest.join('\n')}
 
 IMPORTANT: Return ONLY ONE category path that best matches the URL content. Use the EXACT path from the list above. If none of the existing folders are appropriate, you may suggest a new folder name.`;
   } else {
