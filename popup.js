@@ -36,7 +36,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     readwiseEnabled: false,
     readwiseAccessToken: '',
     raindropEnabled: false,
-    raindropAccessToken: ''
+    raindropAccessToken: '',
+    instapaperCheckedByDefault: true,
+    todoistCheckedByDefault: false,
+    thingsCheckedByDefault: false,
+    readwiseCheckedByDefault: false,
+    raindropCheckedByDefault: false
   });
 
   function isMacOrIOS() {
@@ -59,6 +64,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     showStatus(configWarning, 'warning');
     document.getElementById('analyzeBtn').disabled = true;
   }
+
+  document.getElementById('saveToInstapaper').checked = settings.instapaperCheckedByDefault !== false;
+  document.getElementById('createTodoist').checked = settings.todoistCheckedByDefault === true;
+  document.getElementById('createThings').checked = settings.thingsCheckedByDefault === true;
+  document.getElementById('saveToReadwise').checked = settings.readwiseCheckedByDefault === true;
+  document.getElementById('saveToRaindrop').checked = settings.raindropCheckedByDefault === true;
 
   toggleIntegrationRow('saveToInstapaperRow', 'saveToInstapaper',
     settings.instapaperEnabled !== false && settings.instapaperUsername?.trim() && settings.instapaperPassword);

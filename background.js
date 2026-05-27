@@ -503,10 +503,10 @@ async function saveToInstapaper(url, title, username, password) {
 }
 
 /**
- * Creates a task in Todoist using the REST API v2
+ * Creates a task in Todoist using the REST API v1
  */
 async function createTodoistTask(url, title, summary, apiToken) {
-  const todoistUrl = 'https://api.todoist.com/rest/v2/tasks';
+  const todoistUrl = 'https://api.todoist.com/api/v1/tasks';
 
   // Create task content with URL and summary
   const taskContent = `${title}\n${url}\n\n${summary}`;
@@ -524,11 +524,11 @@ async function createTodoistTask(url, title, summary, apiToken) {
       })
     });
 
-    if (response.status === 200) {
+    if (response.ok) {
       // Successfully created
       const taskData = await response.json();
       return { success: true, taskId: taskData.id };
-    } else if (response.status === 403) {
+    } else if (response.status === 401 || response.status === 403) {
       return { success: false, error: 'Invalid Todoist API token' };
     } else if (response.status === 400) {
       return { success: false, error: 'Invalid request parameters' };

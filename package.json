@@ -1,6 +1,6 @@
 {
   "name": "bookmark-ai",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "AI-powered bookmark organizer Chrome extension",
   "private": true,
   "type": "module",

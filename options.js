@@ -23,7 +23,12 @@ const DEFAULT_SETTINGS = {
   healthCheckInterval: 'weekly',
   healthCheckStaleDays: 365,
   healthCheckTypes: { dead: true, domainGone: true, redirects: true, stale: true, titleChanged: true },
-  healthCheckRunOnOpen: true
+  healthCheckRunOnOpen: true,
+  instapaperCheckedByDefault: true,
+  todoistCheckedByDefault: false,
+  thingsCheckedByDefault: false,
+  readwiseCheckedByDefault: false,
+  raindropCheckedByDefault: false
 };
 
 let currentProvider = 'anthropic';
@@ -56,6 +61,22 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('intervalGroup').style.opacity = enabled ? '1' : '0.4';
     document.getElementById('staleGroup').style.opacity = enabled ? '1' : '0.4';
     document.getElementById('checkTypesGroup').style.opacity = enabled ? '1' : '0.4';
+  });
+
+  const dependencyPairs = [
+    ['instapaperEnabled', 'instapaperCheckedByDefaultGroup'],
+    ['todoistEnabled', 'todoistCheckedByDefaultGroup'],
+    ['thingsEnabled', 'thingsCheckedByDefaultGroup'],
+    ['readwiseEnabled', 'readwiseCheckedByDefaultGroup'],
+    ['raindropEnabled', 'raindropCheckedByDefaultGroup']
+  ];
+  dependencyPairs.forEach(([enabledId]) => {
+    const enabledInput = document.getElementById(enabledId);
+    if (enabledInput) {
+      enabledInput.addEventListener('change', () => {
+        syncToggleDependencies();
+      });
+    }
   });
 
   loadSettings();
@@ -193,6 +214,11 @@ async function loadSettings() {
     document.getElementById('readwiseAccessToken').value = settings.readwiseAccessToken;
     document.getElementById('raindropEnabled').checked = settings.raindropEnabled === true;
     document.getElementById('raindropAccessToken').value = settings.raindropAccessToken;
+    document.getElementById('instapaperCheckedByDefault').checked = settings.instapaperCheckedByDefault !== false;
+    document.getElementById('todoistCheckedByDefault').checked = settings.todoistCheckedByDefault === true;
+    document.getElementById('thingsCheckedByDefault').checked = settings.thingsCheckedByDefault === true;
+    document.getElementById('readwiseCheckedByDefault').checked = settings.readwiseCheckedByDefault === true;
+    document.getElementById('raindropCheckedByDefault').checked = settings.raindropCheckedByDefault === true;
 
     document.getElementById('healthCheckEnabled').checked = settings.healthCheckEnabled === true;
     document.getElementById('healthCheckStaleDays').value = settings.healthCheckStaleDays || 365;
@@ -216,6 +242,8 @@ async function loadSettings() {
 
     domainRules = Array.isArray(settings.domainRules) ? settings.domainRules : [];
     renderDomainRules();
+
+    syncToggleDependencies();
 
     // If an OpenRouter model was previously saved, load the model list and pre-select it
     if (settings.openrouterApiKey && settings.openrouterModel) {
@@ -328,6 +356,11 @@ async function saveSettings(event = null) {
   const readwiseAccessToken = document.getElementById('readwiseAccessToken').value.trim();
   const raindropEnabled = document.getElementById('raindropEnabled').checked;
   const raindropAccessToken = document.getElementById('raindropAccessToken').value.trim();
+  const instapaperCheckedByDefault = document.getElementById('instapaperCheckedByDefault').checked;
+  const todoistCheckedByDefault = document.getElementById('todoistCheckedByDefault').checked;
+  const thingsCheckedByDefault = document.getElementById('thingsCheckedByDefault').checked;
+  const readwiseCheckedByDefault = document.getElementById('readwiseCheckedByDefault').checked;
+  const raindropCheckedByDefault = document.getElementById('raindropCheckedByDefault').checked;
   const healthCheckEnabled = document.getElementById('healthCheckEnabled').checked;
   const healthCheckStaleDays = parseInt(document.getElementById('healthCheckStaleDays').value, 10) || 365;
   const activeTab = document.querySelector('.interval-tab.active');
@@ -362,6 +395,11 @@ async function saveSettings(event = null) {
       readwiseAccessToken,
       raindropEnabled,
       raindropAccessToken,
+      instapaperCheckedByDefault,
+      todoistCheckedByDefault,
+      thingsCheckedByDefault,
+      readwiseCheckedByDefault,
+      raindropCheckedByDefault,
       healthCheckEnabled,
       healthCheckInterval,
       healthCheckStaleDays,
@@ -393,4 +431,26 @@ function showStatus(message, type) {
 function hideStatus() {
   const statusDiv = document.getElementById('status');
   statusDiv.classList.remove('visible');
+}
+
+function syncToggleDependencies() {
+  const dependencyPairs = [
+    ['instapaperEnabled', 'instapaperCheckedByDefaultGroup'],
+    ['todoistEnabled', 'todoistCheckedByDefaultGroup'],
+    ['thingsEnabled', 'thingsCheckedByDefaultGroup'],
+    ['readwiseEnabled', 'readwiseCheckedByDefaultGroup'],
+    ['raindropEnabled', 'raindropCheckedByDefaultGroup']
+  ];
+  dependencyPairs.forEach(([enabledId, dependentGroupId]) => {
+    const enabledInput = document.getElementById(enabledId);
+    const dependentGroup = document.getElementById(dependentGroupId);
+    if (enabledInput && dependentGroup) {
+      const isChecked = enabledInput.checked;
+      dependentGroup.style.opacity = isChecked ? '1' : '0.4';
+      const checkbox = dependentGroup.querySelector('input[type="checkbox"]');
+      if (checkbox) {
+        checkbox.disabled = !isChecked;
+      }
+    }
+  });
 }
