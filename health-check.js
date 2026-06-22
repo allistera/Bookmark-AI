@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('bulkDeleteDead').addEventListener('click', () => bulkFix('deleteAllDead'));
   document.getElementById('bulkFixRedirects').addEventListener('click', () => bulkFix('fixAllRedirects'));
   document.getElementById('bulkDismissStale').addEventListener('click', () => bulkFix('dismissAllStale'));
+  document.getElementById('bulkDeleteStale').addEventListener('click', () => bulkFix('deleteAllStale'));
   document.getElementById('bulkUpdateTitles').addEventListener('click', () => bulkFix('updateAllTitles'));
 });
 
@@ -277,7 +278,7 @@ function buildActionButtons(entry) {
     row.appendChild(btn);
   }
 
-  if (entry.issues.includes('dead') || entry.issues.includes('domain_gone')) {
+  if (entry.issues.includes('dead') || entry.issues.includes('domain_gone') || entry.issues.includes('stale')) {
     const btn = makeButton('Delete Bookmark', 'btn-danger btn-sm', async () => {
       if (confirm(`Delete "${entry.title || entry.url}"?`)) {
         await applyFix(entry.id, 'delete');
@@ -332,6 +333,11 @@ async function bulkFix(fixType) {
       .filter(r => r.issues.includes('stale') && !r.dismissed)
       .map(r => r.id);
     confirmMsg = `Dismiss ${ids.length} stale bookmarks?`;
+  } else if (fixType === 'deleteAllStale') {
+    ids = currentResults.results
+      .filter(r => r.issues.includes('stale') && !r.dismissed)
+      .map(r => r.id);
+    confirmMsg = `Delete ${ids.length} stale bookmarks? This cannot be undone.`;
   } else if (fixType === 'updateAllTitles') {
     ids = currentResults.results
       .filter(r => r.issues.includes('title_changed') && r.newTitle && !r.dismissed)
@@ -374,6 +380,7 @@ function updateBulkBar(results) {
   const bulkDeleteDead = document.getElementById('bulkDeleteDead');
   const bulkFixRedirects = document.getElementById('bulkFixRedirects');
   const bulkDismissStale = document.getElementById('bulkDismissStale');
+  const bulkDeleteStale = document.getElementById('bulkDeleteStale');
   const bulkUpdateTitles = document.getElementById('bulkUpdateTitles');
 
   bulkDeleteDead.style.display = showDead ? 'inline-block' : 'none';
@@ -384,6 +391,9 @@ function updateBulkBar(results) {
 
   bulkDismissStale.style.display = showStale ? 'inline-block' : 'none';
   bulkDismissStale.textContent = `Dismiss all stale (${staleCount})`;
+
+  bulkDeleteStale.style.display = showStale ? 'inline-block' : 'none';
+  bulkDeleteStale.textContent = `Delete all stale (${staleCount})`;
 
   bulkUpdateTitles.style.display = showTitleChanged ? 'inline-block' : 'none';
   bulkUpdateTitles.textContent = `Update all titles (${titleChangedCount})`;

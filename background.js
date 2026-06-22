@@ -1420,7 +1420,7 @@ async function applyHealthFix(bookmarkId, fixType, newValue) {
 
 /**
  * Applies a bulk fix to multiple bookmarks of a specific issue type.
- * @param {'deleteAllDead'|'fixAllRedirects'|'dismissAllStale'|'updateAllTitles'} fixType
+ * @param {'deleteAllDead'|'fixAllRedirects'|'dismissAllStale'|'deleteAllStale'|'updateAllTitles'} fixType
  * @param {string[]} ids
  */
 async function applyBulkFix(fixType, ids) {
@@ -1432,7 +1432,7 @@ async function applyBulkFix(fixType, ids) {
 
   for (const id of ids) {
     try {
-      if (fixType === 'deleteAllDead') {
+      if (fixType === 'deleteAllDead' || fixType === 'deleteAllStale') {
         await chrome.bookmarks.remove(id);
         const idx = results.findIndex(r => r.id === id);
         if (idx >= 0) { results.splice(idx, 1); modified = true; }
