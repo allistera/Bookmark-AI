@@ -1,4 +1,6 @@
 let bookmarks = [];
+let bookmarksById = new Map();
+let rowsById = new Map(); // bookmarkId -> { tr, checkbox, sugCell, statusEl }
 
 document.addEventListener('DOMContentLoaded', async () => {
   await loadUnsortedBookmarks();
@@ -12,9 +14,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('deleteSelectedBtn').addEventListener('click', deleteSelected);
   document.getElementById('applyBtn').addEventListener('click', applySelected);
   document.getElementById('selectAll').addEventListener('change', (e) => {
-    document.querySelectorAll('.bm-cb').forEach(cb => {
-      if (!cb.disabled) cb.checked = e.target.checked;
-    });
+    for (const row of rowsById.values()) {
+      if (!row.checkbox.disabled) row.checkbox.checked = e.target.checked;
+    }
     updateButtonCounts();
   });
 });
@@ -32,6 +34,7 @@ async function loadUnsortedBookmarks() {
     return;
   }
   bookmarks = response.bookmarks;
+  bookmarksById = new Map(bookmarks.map(bm => [bm.id, bm]));
   if (bookmarks.length === 0) {
     showAlert('All bookmarks are already organized — nothing to sort!', 'success');
     document.getElementById('tableCard').style.display = 'none';
@@ -48,15 +51,19 @@ async function loadUnsortedBookmarks() {
 function renderTable() {
   const tbody = document.getElementById('bookmarkRows');
   tbody.textContent = '';
+  rowsById = new Map();
 
-  bookmarks.forEach((bm, idx) => {
+  // Build off-DOM and append once — appending each row directly into the live table
+  // forces a layout pass per row, which adds up for a large inbox.
+  const fragment = document.createDocumentFragment();
+
+  for (const bm of bookmarks) {
     const tr = document.createElement('tr');
 
     const tdCb = document.createElement('td');
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.className = 'bm-cb';
-    cb.dataset.idx = idx;
     cb.checked = true;
     tdCb.appendChild(cb);
 
@@ -76,12 +83,10 @@ function renderTable() {
     tdTitle.appendChild(urlDiv);
 
     const tdSug = document.createElement('td');
-    tdSug.id = `sug-${idx}`;
     tdSug.textContent = '—';
 
     const tdStatus = document.createElement('td');
     const statusEl = document.createElement('span');
-    statusEl.id = `status-${idx}`;
     statusEl.className = 'row-status ready';
     statusEl.textContent = 'Waiting';
     tdStatus.appendChild(statusEl);
@@ -90,13 +95,20 @@ function renderTable() {
     tr.appendChild(tdTitle);
     tr.appendChild(tdSug);
     tr.appendChild(tdStatus);
-    tbody.appendChild(tr);
-  });
+    fragment.appendChild(tr);
+
+    rowsById.set(bm.id, { tr, checkbox: cb, sugCell: tdSug, statusEl });
+  }
+
+  tbody.appendChild(fragment);
 }
 
 async function analyzeSelected() {
-  const checked = [...document.querySelectorAll('.bm-cb:checked')];
-  if (checked.length === 0) {
+  const checkedIds = [...rowsById.entries()]
+    .filter(([, row]) => row.checkbox.checked)
+    .map(([id]) => id);
+
+  if (checkedIds.length === 0) {
     showAlert('No bookmarks selected.', 'info');
     return;
   }
@@ -104,17 +116,13 @@ async function analyzeSelected() {
   const btn = document.getElementById('analyzeBtn');
   btn.disabled = true;
   btn.textContent = 'Analyzing…';
-  showAlert(`Analyzing ${checked.length} bookmarks…`, 'loading');
+  showAlert(`Analyzing ${checkedIds.length} bookmarks…`, 'loading');
 
   // Process in batches of 5 to avoid overwhelming the AI API
   const BATCH = 5;
-  for (let i = 0; i < checked.length; i += BATCH) {
+  for (let i = 0; i < checkedIds.length; i += BATCH) {
     await Promise.all(
-      checked.slice(i, i + BATCH).map(async (cb) => {
-        const idx = parseInt(cb.dataset.idx);
-        const bm = bookmarks[idx];
-        await analyzeOne(bm, idx);
-      })
+      checkedIds.slice(i, i + BATCH).map(id => analyzeOne(bookmarksById.get(id)))
     );
   }
 
@@ -122,10 +130,7 @@ async function analyzeSelected() {
   btn.disabled = false;
 
   // Automate organizing successfully analyzed bookmarks
-  const successfullyAnalyzed = checked.filter(cb => {
-    const bm = bookmarks[parseInt(cb.dataset.idx)];
-    return bm && bm.suggestedFolder;
-  });
+  const successfullyAnalyzed = checkedIds.filter(id => bookmarksById.get(id)?.suggestedFolder);
 
   if (successfullyAnalyzed.length > 0) {
     showAlert(`Analysis complete. Automatically organizing ${successfullyAnalyzed.length} bookmark(s) into suggested folders…`, 'loading');
@@ -136,8 +141,9 @@ async function analyzeSelected() {
   }
 }
 
-async function analyzeOne(bm, idx) {
-  setStatus(idx, 'analyzing', 'Analyzing…');
+async function analyzeOne(bm) {
+  if (!bm) return;
+  setStatus(bm.id, 'analyzing', 'Analyzing…');
   try {
     const res = await chrome.runtime.sendMessage({
       action: 'getAISuggestion',
@@ -146,18 +152,20 @@ async function analyzeOne(bm, idx) {
     });
     if (res.success) {
       bm.suggestedFolder = res.matchedCategory;
-      renderSuggestion(idx, res.matchedCategory);
-      setStatus(idx, 'ready', 'Ready');
+      renderSuggestion(bm.id, res.matchedCategory);
+      setStatus(bm.id, 'ready', 'Ready');
     } else {
-      setStatus(idx, 'error', res.error || 'Error');
+      setStatus(bm.id, 'error', res.error || 'Error');
     }
   } catch (e) {
-    setStatus(idx, 'error', e.message);
+    setStatus(bm.id, 'error', e.message);
   }
 }
 
-function renderSuggestion(idx, folder) {
-  const cell = document.getElementById(`sug-${idx}`);
+function renderSuggestion(bookmarkId, folder) {
+  const row = rowsById.get(bookmarkId);
+  if (!row) return;
+  const cell = row.sugCell;
   cell.textContent = '';
 
   const badge = document.createElement('span');
@@ -178,13 +186,14 @@ function renderSuggestion(idx, folder) {
 
     const commit = () => {
       const newFolder = input.value.trim() || folder;
-      bookmarks[idx].suggestedFolder = newFolder;
-      renderSuggestion(idx, newFolder);
+      const bm = bookmarksById.get(bookmarkId);
+      if (bm) bm.suggestedFolder = newFolder;
+      renderSuggestion(bookmarkId, newFolder);
     };
     input.addEventListener('blur', commit);
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') commit();
-      if (e.key === 'Escape') renderSuggestion(idx, folder);
+      if (e.key === 'Escape') renderSuggestion(bookmarkId, folder);
     });
   });
 
@@ -192,11 +201,9 @@ function renderSuggestion(idx, folder) {
 }
 
 async function applySelected() {
-  const checked = [...document.querySelectorAll('.bm-cb:checked')];
-  const toMove = checked.filter(cb => {
-    const bm = bookmarks[parseInt(cb.dataset.idx)];
-    return bm && bm.suggestedFolder;
-  });
+  const toMove = [...rowsById.entries()]
+    .filter(([id, row]) => row.checkbox.checked && bookmarksById.get(id)?.suggestedFolder)
+    .map(([id]) => id);
 
   if (toMove.length === 0) {
     showAlert('No analyzed bookmarks selected.', 'info');
@@ -206,79 +213,125 @@ async function applySelected() {
   const btn = document.getElementById('applyBtn');
   btn.disabled = true;
 
-  for (const cb of toMove) {
-    const idx = parseInt(cb.dataset.idx);
-    const bm = bookmarks[idx];
-    setStatus(idx, 'moving', 'Moving…');
-    try {
-      await chrome.runtime.sendMessage({
-        action: 'moveBookmark',
-        bookmarkId: bm.id,
-        categoryPath: bm.suggestedFolder
-      });
-      setStatus(idx, 'done', 'Moved');
-      cb.checked = false;
-      cb.disabled = true;
-    } catch (e) {
-      setStatus(idx, 'error', 'Failed: ' + e.message);
+  toMove.forEach(id => setStatus(id, 'moving', 'Moving…'));
+
+  const items = toMove.map(id => ({ bookmarkId: id, categoryPath: bookmarksById.get(id).suggestedFolder }));
+
+  let response;
+  try {
+    // One message for the whole batch — the background page resolves each distinct
+    // folder path once instead of the page sending (and re-resolving) one move per row.
+    response = await chrome.runtime.sendMessage({ action: 'moveBookmarks', items });
+  } catch (e) {
+    toMove.forEach(id => setStatus(id, 'error', 'Failed: ' + e.message));
+    btn.disabled = false;
+    return;
+  }
+
+  const resultById = new Map((response.results || []).map(r => [r.bookmarkId, r]));
+  const movedIds = [];
+
+  for (const id of toMove) {
+    const result = resultById.get(id);
+    if (result && result.success) {
+      setStatus(id, 'done', 'Moved');
+      movedIds.push(id);
+    } else {
+      setStatus(id, 'error', 'Failed: ' + (result ? result.error : 'Unknown error'));
     }
   }
 
-  if (btn) btn.disabled = false;
-  await loadUnsortedBookmarks();
+  // Patch out the rows that actually left the unsorted set instead of re-fetching
+  // and re-rendering the whole table.
+  removeRows(movedIds);
+
+  btn.disabled = false;
+  updateButtonCounts();
   showAlert('Done automatically organizing bookmarks.', 'success');
 }
 
-function setStatus(idx, state, text) {
-  const el = document.getElementById(`status-${idx}`);
-  if (!el) return;
-  el.className = `row-status ${state}`;
-  el.textContent = text;
-}
-
 async function deleteSelected() {
-  const checked = [...document.querySelectorAll('.bm-cb:checked')];
-  const toDelete = checked.map(cb => {
-    const idx = parseInt(cb.dataset.idx);
-    return { cb, idx, bm: bookmarks[idx] };
-  }).filter(item => item.bm);
+  const toDelete = [...rowsById.entries()]
+    .filter(([, row]) => row.checkbox.checked)
+    .map(([id]) => id);
 
   if (toDelete.length === 0) {
     showAlert('No bookmarks selected for deletion.', 'info');
     return;
   }
 
-  if (confirm(`Are you sure you want to delete ${toDelete.length} selected bookmark(s)?`)) {
-    const btn = document.getElementById('deleteSelectedBtn');
-    btn.disabled = true;
+  if (!confirm(`Are you sure you want to delete ${toDelete.length} selected bookmark(s)?`)) {
+    return;
+  }
 
-    for (const item of toDelete) {
-      setStatus(item.idx, 'moving', 'Deleting…');
-      try {
-        const response = await chrome.runtime.sendMessage({
-          action: 'deleteBookmark',
-          bookmarkId: item.bm.id
-        });
-        if (response.success) {
-          item.cb.checked = false;
-          item.cb.disabled = true;
-          setStatus(item.idx, 'done', 'Deleted');
-        } else {
-          setStatus(item.idx, 'error', 'Failed: ' + response.error);
-        }
-      } catch (e) {
-        setStatus(item.idx, 'error', 'Failed: ' + e.message);
-      }
-    }
+  const btn = document.getElementById('deleteSelectedBtn');
+  btn.disabled = true;
 
+  toDelete.forEach(id => setStatus(id, 'moving', 'Deleting…'));
+
+  let response;
+  try {
+    response = await chrome.runtime.sendMessage({ action: 'deleteBookmarks', bookmarkIds: toDelete });
+  } catch (e) {
+    toDelete.forEach(id => setStatus(id, 'error', 'Failed: ' + e.message));
     btn.disabled = false;
-    await loadUnsortedBookmarks();
+    return;
+  }
+
+  const resultById = new Map((response.results || []).map(r => [r.bookmarkId, r]));
+  const deletedIds = [];
+
+  for (const id of toDelete) {
+    const result = resultById.get(id);
+    if (result && result.success) {
+      setStatus(id, 'done', 'Deleted');
+      deletedIds.push(id);
+    } else {
+      setStatus(id, 'error', 'Failed: ' + (result ? result.error : 'Unknown error'));
+    }
+  }
+
+  removeRows(deletedIds);
+
+  btn.disabled = false;
+  updateButtonCounts();
+}
+
+/**
+ * Removes rows for bookmarks that have left the unsorted set (moved or deleted)
+ * directly from the DOM and local state, instead of re-fetching the remaining
+ * unsorted bookmarks and re-rendering the whole table.
+ */
+function removeRows(bookmarkIds) {
+  if (bookmarkIds.length === 0) return;
+  const idSet = new Set(bookmarkIds);
+
+  for (const id of bookmarkIds) {
+    const row = rowsById.get(id);
+    if (row) row.tr.remove();
+    rowsById.delete(id);
+    bookmarksById.delete(id);
+  }
+  bookmarks = bookmarks.filter(bm => !idSet.has(bm.id));
+
+  if (bookmarks.length === 0) {
+    document.getElementById('tableCard').style.display = 'none';
+    document.getElementById('deleteSelectedBtn').style.display = 'none';
   }
 }
 
+function setStatus(bookmarkId, state, text) {
+  const row = rowsById.get(bookmarkId);
+  if (!row) return;
+  row.statusEl.className = `row-status ${state}`;
+  row.statusEl.textContent = text;
+}
+
 function updateButtonCounts() {
-  const checked = document.querySelectorAll('.bm-cb:checked');
-  const count = checked.length;
+  let count = 0;
+  for (const row of rowsById.values()) {
+    if (row.checkbox.checked) count++;
+  }
   document.getElementById('applyBtn').textContent = `Move Selected (${count})`;
   document.getElementById('deleteSelectedBtn').textContent = `Delete Selected (${count})`;
   document.getElementById('deleteSelectedBtn').disabled = count === 0;

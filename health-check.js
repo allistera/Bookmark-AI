@@ -1,6 +1,5 @@
 let currentFilter = 'dead';
 let currentResults = null;
-let pollTimer = null;
 
 // ── Initialization ──────────────────────────────────────────
 
@@ -24,6 +23,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('bulkUpdateTitles').addEventListener('click', () => bulkFix('updateAllTitles'));
 });
 
+// Progress updates arrive via chrome.storage.onChanged instead of a 500ms poll loop —
+// the service worker already throttles its writes to roughly that cadence, so polling
+// on top of that was mostly re-reading a value that hadn't changed.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local' || !changes.healthCheckProgress) return;
+  const progress = changes.healthCheckProgress.newValue;
+  if (!progress) return;
+
+  if (progress.inProgress) {
+    showProgress(progress.current, progress.total);
+  } else {
+    // A check finished — possibly started elsewhere (e.g. the periodic alarm) — so
+    // reflect the final results instead of leaving a stale progress bar on screen.
+    hideProgress();
+    loadResults();
+  }
+});
+
 // ── Run health check ─────────────────────────────────────────
 
 async function runHealthCheck() {
@@ -32,11 +49,9 @@ async function runHealthCheck() {
   btn.textContent = 'Running…';
 
   showProgress(0, 0);
-  startProgressPolling();
 
   try {
     const result = await chrome.runtime.sendMessage({ action: 'runHealthCheck' });
-    stopProgressPolling();
     hideProgress();
     if (result && result.success) {
       await loadResults();
@@ -44,27 +59,12 @@ async function runHealthCheck() {
       showError(result ? result.error : 'Health check failed.');
     }
   } catch (err) {
-    stopProgressPolling();
     hideProgress();
     showError(err.message || 'Unexpected error running health check.');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Run Health Check';
   }
-}
-
-function startProgressPolling() {
-  pollTimer = setInterval(async () => {
-    const data = await chrome.storage.local.get('healthCheckProgress');
-    if (data.healthCheckProgress) {
-      const { current, total } = data.healthCheckProgress;
-      showProgress(current, total);
-    }
-  }, 500);
-}
-
-function stopProgressPolling() {
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
 }
 
 function showProgress(current, total) {
@@ -83,13 +83,13 @@ function hideProgress() {
 // ── Load & render results ─────────────────────────────────────
 
 async function loadResults() {
-  const data = await chrome.storage.local.get(['healthCheckResults', 'healthCheckProgress']);
+  const data = await chrome.runtime.sendMessage({ action: 'getHealthCheckData' });
 
-  // If a check is in progress, show progress bar and wait
+  // If a check is in progress, show the progress bar — further updates arrive via the
+  // chrome.storage.onChanged listener above.
   if (data.healthCheckProgress && data.healthCheckProgress.inProgress) {
     const { current, total } = data.healthCheckProgress;
     showProgress(current, total);
-    startProgressPolling();
     return;
   }
 
@@ -138,9 +138,13 @@ function renderResults(results) {
     return;
   }
 
+  // Build off-DOM and append once — appending each card directly into the live list
+  // forces a layout pass per card, which adds up fast for large result sets.
+  const fragment = document.createDocumentFragment();
   for (const entry of filtered) {
-    list.appendChild(buildResultCard(entry));
+    fragment.appendChild(buildResultCard(entry));
   }
+  list.appendChild(fragment);
 }
 
 function filterResults(results, filter) {
@@ -353,7 +357,7 @@ async function bulkFix(fixType) {
 }
 
 async function refreshResults() {
-  const data = await chrome.storage.local.get('healthCheckResults');
+  const data = await chrome.runtime.sendMessage({ action: 'getHealthCheckData' });
   if (data.healthCheckResults) {
     currentResults = data.healthCheckResults;
     renderSummary(currentResults.summary, currentResults.lastRun);
@@ -364,12 +368,19 @@ async function refreshResults() {
 // ── Bulk action bar visibility ────────────────────────────────
 
 function updateBulkBar(results) {
-  const deadCount = results.filter(r =>
-    (r.issues.includes('dead') || r.issues.includes('domain_gone')) && !r.dismissed
-  ).length;
-  const redirectCount = results.filter(r => r.issues.includes('redirect') && r.newUrl && !r.dismissed).length;
-  const staleCount = results.filter(r => r.issues.includes('stale') && !r.dismissed).length;
-  const titleChangedCount = results.filter(r => r.issues.includes('title_changed') && r.newTitle && !r.dismissed).length;
+  // Single pass accumulating every count, instead of four separate .filter() scans.
+  let deadCount = 0;
+  let redirectCount = 0;
+  let staleCount = 0;
+  let titleChangedCount = 0;
+
+  for (const r of results) {
+    if (r.dismissed) continue;
+    if (r.issues.includes('dead') || r.issues.includes('domain_gone')) deadCount++;
+    if (r.issues.includes('redirect') && r.newUrl) redirectCount++;
+    if (r.issues.includes('stale')) staleCount++;
+    if (r.issues.includes('title_changed') && r.newTitle) titleChangedCount++;
+  }
 
   // Only show bulk actions relevant to the current filter
   const showDead = ['issues', 'dead', 'domain_gone'].includes(currentFilter) && deadCount > 1;
@@ -474,6 +485,8 @@ function timeAgo(timestampMs) {
   return `${years}yr ago`;
 }
 
+const HTML_ESCAPE_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };
+
 function escapeHtml(str) {
-  return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return (str || '').replace(/[&<>]/g, ch => HTML_ESCAPE_MAP[ch]);
 }

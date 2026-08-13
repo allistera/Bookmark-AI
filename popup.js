@@ -2,7 +2,36 @@ let currentUrl = '';
 let currentTitle = '';
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  // Independent lookups — fire both immediately instead of awaiting the tab query
+  // before even starting the settings read.
+  const [[tab], settings] = await Promise.all([
+    chrome.tabs.query({ active: true, currentWindow: true }),
+    chrome.storage.sync.get({
+      aiProvider: 'anthropic',
+      anthropicApiKey: '',
+      openaiApiKey: '',
+      openaiModel: 'gpt-4o',
+      openrouterApiKey: '',
+      openrouterModel: '',
+      geminiApiKey: '',
+      geminiModel: 'gemini-2.5-flash',
+      instapaperUsername: '',
+      instapaperPassword: '',
+      todoistApiToken: '',
+      instapaperEnabled: true,
+      todoistEnabled: false,
+      thingsEnabled: false,
+      readwiseEnabled: false,
+      readwiseAccessToken: '',
+      raindropEnabled: false,
+      raindropAccessToken: '',
+      instapaperCheckedByDefault: true,
+      todoistCheckedByDefault: false,
+      thingsCheckedByDefault: false,
+      readwiseCheckedByDefault: false,
+      raindropCheckedByDefault: false
+    })
+  ]);
 
   if (tab) {
     currentUrl = tab.url;
@@ -16,32 +45,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         chrome.tabs.create({ url: chrome.runtime.getURL('search.html') + '?q=' + encodeURIComponent(query) });
       }
     }
-  });
-
-  const settings = await chrome.storage.sync.get({
-    aiProvider: 'anthropic',
-    anthropicApiKey: '',
-    openaiApiKey: '',
-    openaiModel: 'gpt-4o',
-    openrouterApiKey: '',
-    openrouterModel: '',
-    geminiApiKey: '',
-    geminiModel: 'gemini-2.5-flash',
-    instapaperUsername: '',
-    instapaperPassword: '',
-    todoistApiToken: '',
-    instapaperEnabled: true,
-    todoistEnabled: false,
-    thingsEnabled: false,
-    readwiseEnabled: false,
-    readwiseAccessToken: '',
-    raindropEnabled: false,
-    raindropAccessToken: '',
-    instapaperCheckedByDefault: true,
-    todoistCheckedByDefault: false,
-    thingsCheckedByDefault: false,
-    readwiseCheckedByDefault: false,
-    raindropCheckedByDefault: false
   });
 
   function isMacOrIOS() {

@@ -3,24 +3,34 @@ const USER_AGENT = 'Mozilla/5.0 (compatible; Bookmark-AI/1.0)';
 // Chrome assigns fixed IDs to the built-in bookmark containers, but they can differ by browser/profile
 let BOOKMARK_ROOT_IDS = { ROOT: '0', BAR: '1', OTHER: '2' };
 
+// Root IDs cannot change within a profile session, so the discovery call is memoised
+// in a module-level promise — every caller within this service-worker lifetime shares
+// the same in-flight/resolved lookup instead of re-fetching the whole tree.
+let rootIdsPromise = null;
+
 // Dynamically discover root IDs if they differ on this browser or profile
-async function initializeRootIds() {
-  try {
-    const tree = await chrome.bookmarks.getTree();
-    const rootNode = tree[0];
-    if (rootNode && rootNode.children && rootNode.children.length > 0) {
-      // The first child of the root node is typically the Bookmarks Bar / Favorites
-      if (rootNode.children[0]) {
-        BOOKMARK_ROOT_IDS.BAR = rootNode.children[0].id;
+function initializeRootIds() {
+  if (!rootIdsPromise) {
+    rootIdsPromise = (async () => {
+      try {
+        const tree = await chrome.bookmarks.getTree();
+        const rootNode = tree[0];
+        if (rootNode && rootNode.children && rootNode.children.length > 0) {
+          // The first child of the root node is typically the Bookmarks Bar / Favorites
+          if (rootNode.children[0]) {
+            BOOKMARK_ROOT_IDS.BAR = rootNode.children[0].id;
+          }
+          // The second child of the root node is typically Other Bookmarks
+          if (rootNode.children[1]) {
+            BOOKMARK_ROOT_IDS.OTHER = rootNode.children[1].id;
+          }
+        }
+      } catch (err) {
+        console.warn('Could not dynamically discover root folder IDs, using defaults:', err);
       }
-      // The second child of the root node is typically Other Bookmarks
-      if (rootNode.children[1]) {
-        BOOKMARK_ROOT_IDS.OTHER = rootNode.children[1].id;
-      }
-    }
-  } catch (err) {
-    console.warn('Could not dynamically discover root folder IDs, using defaults:', err);
+    })();
   }
+  return rootIdsPromise;
 }
 
 // Listen for messages from popup and health-check page
@@ -29,7 +39,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     'analyzeBookmark', 'runHealthCheck', 'getHealthCheckData', 'applyHealthFix',
     'applyBulkFix', 'dismissHealthIssue', 'setupHealthCheckAlarm', 'parseSearchQuery',
     'searchBookmarksLocal', 'searchBookmarksSemantic', 'checkAIConfig', 'undoBookmark',
-    'getUnsortedBookmarks', 'getAISuggestion', 'moveBookmark', 'deleteBookmark'
+    'getUnsortedBookmarks', 'getAISuggestion', 'moveBookmarks', 'deleteBookmarks'
   ];
 
   if (!actionsWithResponse.includes(request.action)) {
@@ -50,7 +60,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         break;
       }
       case 'getHealthCheckData': {
-        const data = await chrome.storage.local.get(['healthCheckResults', 'healthCheckProgress']);
+        const data = await getHealthCheckData();
         sendResponse(data);
         break;
       }
@@ -99,11 +109,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ success: true });
         break;
       }
-      case 'deleteBookmark': {
-        await chrome.bookmarks.remove(request.bookmarkId);
-        sendResponse({ success: true });
-        break;
-      }
       case 'getUnsortedBookmarks': {
         const bookmarks = await getUnsortedBookmarks();
         sendResponse({ success: true, bookmarks });
@@ -114,8 +119,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse(res);
         break;
       }
-      case 'moveBookmark': {
-        const res = await handleMoveBookmark(request);
+      case 'moveBookmarks': {
+        const res = await handleMoveBookmarks(request.items);
+        sendResponse(res);
+        break;
+      }
+      case 'deleteBookmarks': {
+        const res = await handleDeleteBookmarks(request.bookmarkIds);
         sendResponse(res);
         break;
       }
@@ -129,24 +139,47 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 /**
- * Scans the user's bookmark tree and extracts all folder paths
- * @returns {Promise<string[]>} Array of folder paths (e.g., "Work/Projects/Web")
+ * Cached traversal of the full bookmark tree. A single getTree() call derives
+ * the folder-path list, an id -> folder-path map, and the flat list of bookmark
+ * leaf nodes together, so callers that used to each do their own full-tree read
+ * (getExistingBookmarkFolders, getFolderPathMap, getAllBookmarks) now share one.
+ * The cache is invalidated by the chrome.bookmarks.on* listeners registered below
+ * whenever the tree structure actually changes.
+ * @returns {Promise<{folders: string[], folderPathMap: Object<string,string>, allBookmarks: chrome.bookmarks.BookmarkTreeNode[]}>}
  */
-async function getExistingBookmarkFolders() {
+let bookmarkTreeDataPromise = null;
+
+function invalidateBookmarkTreeCache() {
+  bookmarkTreeDataPromise = null;
+}
+
+function getBookmarkTreeData() {
+  if (!bookmarkTreeDataPromise) {
+    bookmarkTreeDataPromise = computeBookmarkTreeData();
+  }
+  return bookmarkTreeDataPromise;
+}
+
+async function computeBookmarkTreeData() {
   await initializeRootIds();
   const tree = await chrome.bookmarks.getTree();
   const folders = [];
+  const folderPathMap = {};
+  const allBookmarks = [];
 
-  function extractFolders(nodes, path = '') {
+  function traverse(nodes, path = '') {
     for (const node of nodes) {
-      // Skip if it's a bookmark (has url) - we only want folders
-      if (node.url) continue;
+      // Bookmarks (have a url) are leaves — collect them and move on
+      if (node.url) {
+        allBookmarks.push(node);
+        continue;
+      }
 
       // Skip root nodes (Bookmarks Bar, Other Bookmarks, Mobile Bookmarks)
       // but process their children
       if (node.parentId === BOOKMARK_ROOT_IDS.ROOT) {
         if (node.children) {
-          extractFolders(node.children, '');
+          traverse(node.children, '');
         }
         continue;
       }
@@ -154,46 +187,125 @@ async function getExistingBookmarkFolders() {
       // Build the current path
       const currentPath = path ? `${path}/${node.title}` : node.title;
 
-      // Add this folder to the list
       if (node.title) {
         folders.push(currentPath);
+        folderPathMap[node.id] = currentPath;
       }
 
       // Recursively process children
       if (node.children) {
-        extractFolders(node.children, currentPath);
+        traverse(node.children, currentPath);
       }
     }
   }
 
-  extractFolders(tree);
+  traverse(tree);
+  return { folders, folderPathMap, allBookmarks };
+}
+
+// Registered at the top level (not inside a function) so these fire for the whole
+// service-worker lifetime. All state above is pure derived state, so a cold rebuild
+// on the next call after a service-worker restart is correct — no persistence needed.
+chrome.bookmarks.onCreated.addListener(invalidateBookmarkTreeCache);
+chrome.bookmarks.onRemoved.addListener(invalidateBookmarkTreeCache);
+chrome.bookmarks.onChanged.addListener(invalidateBookmarkTreeCache);
+chrome.bookmarks.onMoved.addListener(invalidateBookmarkTreeCache);
+chrome.bookmarks.onChildrenReordered.addListener(invalidateBookmarkTreeCache);
+
+/**
+ * Scans the user's bookmark tree and extracts all folder paths
+ * @returns {Promise<string[]>} Array of folder paths (e.g., "Work/Projects/Web")
+ */
+async function getExistingBookmarkFolders() {
+  const { folders } = await getBookmarkTreeData();
   return folders;
 }
 
 /**
- * Fetches the HTML content of a URL for analysis
+ * Fetches a URL with a timeout, returning null (instead of throwing) on any network
+ * failure so callers can decide whether to fall back to a different method.
  */
-async function fetchHtmlContent(url) {
-  const TIMEOUT_MS = 10000; // 10 seconds timeout
+async function fetchWithTimeout(url, method, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    console.log(`Fetching HTML content for: ${url}`);
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': USER_AGENT
-      },
-      signal: controller.signal
+    return await fetch(url, {
+      method,
+      redirect: 'follow',
+      signal: controller.signal,
+      headers: { 'User-Agent': USER_AGENT }
     });
+  } catch {
+    return null;
+  } finally {
     clearTimeout(timer);
+  }
+}
 
-    if (!response.ok) {
-      console.error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
-      return null;
+/**
+ * Cancels/drains a response body we don't intend to read, so the connection is
+ * released instead of left open and unread.
+ */
+function abortResponseBody(response) {
+  if (response && response.body) {
+    response.body.cancel().catch(() => {});
+  }
+}
+
+/**
+ * Reads a response body up to `maxChars` decoded characters, then cancels the reader
+ * — which propagates to abort the underlying transfer — instead of downloading and
+ * decoding a response that may be many times larger than what's actually used.
+ * @param {Response} response
+ * @param {number} maxChars
+ * @returns {Promise<string>}
+ */
+async function readTextUpTo(response, maxChars) {
+  if (!response.body) {
+    // Environments without a streamable body fall back to a full read.
+    const text = await response.text();
+    return text.length > maxChars ? text.slice(0, maxChars) : text;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let text = '';
+
+  try {
+    while (text.length < maxChars) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      text += decoder.decode(value, { stream: true });
     }
+  } finally {
+    reader.cancel().catch(() => {});
+  }
 
-    return await response.text();
+  return text.length > maxChars ? text.slice(0, maxChars) : text;
+}
+
+/**
+ * Fetches the HTML content of a URL for analysis. Streams the response and stops
+ * reading — aborting the rest of the transfer — as soon as `maxChars` characters
+ * have been decoded, instead of downloading a whole (possibly multi-MB) page for a
+ * few KB of prompt content.
+ */
+async function fetchHtmlContent(url, maxChars = 8000) {
+  console.log(`Fetching HTML content for: ${url}`);
+  const response = await fetchWithTimeout(url, 'GET', 10000);
+  if (!response) {
+    console.error('Error fetching HTML: request failed or timed out');
+    return null;
+  }
+
+  if (!response.ok) {
+    console.error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
+    abortResponseBody(response);
+    return null;
+  }
+
+  try {
+    return await readTextUpTo(response, maxChars);
   } catch (error) {
     console.error('Error fetching HTML:', error);
     return null;
@@ -374,10 +486,12 @@ async function analyzeBookmark(url, settings, provider, providedTitle) {
   // Fetch HTML content if no title was provided
   let htmlContent = null;
   if (!providedTitle) {
-    htmlContent = await fetchHtmlContent(url);
-    // Truncate HTML to first 8000 characters to keep token usage reasonable
-    if (htmlContent && htmlContent.length > 8000) {
-      htmlContent = htmlContent.substring(0, 8000) + '\n... [content truncated]';
+    // fetchHtmlContent already stops downloading once it has this many characters,
+    // to keep token usage reasonable without paying for a full-page transfer.
+    const HTML_CHAR_LIMIT = 8000;
+    htmlContent = await fetchHtmlContent(url, HTML_CHAR_LIMIT);
+    if (htmlContent && htmlContent.length >= HTML_CHAR_LIMIT) {
+      htmlContent += '\n... [content truncated]';
     }
   }
 
@@ -797,6 +911,32 @@ async function createBookmarkInCategory(url, title, categoryPath) {
 }
 
 /**
+ * Settings (and therefore domainRules) are re-fetched from chrome.storage.sync on every
+ * call, so there's no stable array reference to key a cache off of — instead the parsed
+ * {host, pathPrefix} form is cached by the rules' serialised content. A bulk operation
+ * (e.g. analysing many inbox bookmarks) reuses the same parse instead of re-splitting
+ * every rule's domain string for every single URL.
+ */
+let parsedDomainRulesCache = { key: null, parsed: [] };
+
+function getParsedDomainRules(rules) {
+  const key = JSON.stringify(rules || []);
+  if (parsedDomainRulesCache.key !== key) {
+    const parsed = [];
+    for (const rule of rules || []) {
+      const domain = (rule.domain || '').trim();
+      if (!domain || !rule.folder) continue;
+      const slashIdx = domain.indexOf('/');
+      parsed.push(slashIdx === -1
+        ? { host: domain, pathPrefix: null, folder: rule.folder }
+        : { host: domain.slice(0, slashIdx), pathPrefix: domain.slice(slashIdx), folder: rule.folder });
+    }
+    parsedDomainRulesCache = { key, parsed };
+  }
+  return parsedDomainRulesCache.parsed;
+}
+
+/**
  * Checks if a URL matches any domain rule and returns the target folder path.
  * Rules with a "/" are matched as hostname + path prefix (e.g. "youtube.com/watch").
  * Rules without "/" are matched as hostname only (e.g. "github.com").
@@ -805,24 +945,15 @@ async function createBookmarkInCategory(url, title, categoryPath) {
  * @returns {string|null} The matched folder path, or null if no rule matches
  */
 function matchesDomainRule(url, rules) {
-  if (!rules || rules.length === 0) return null;
+  const parsedRules = getParsedDomainRules(rules);
+  if (parsedRules.length === 0) return null;
   try {
     const urlObj = new URL(url);
-    for (const rule of rules) {
-      const domain = (rule.domain || '').trim();
-      if (!domain || !rule.folder) continue;
-      if (domain.includes('/')) {
-        const slashIdx = domain.indexOf('/');
-        const ruleDomain = domain.slice(0, slashIdx);
-        const rulePath = domain.slice(slashIdx); // includes leading /
-        const hostnameMatch = urlObj.hostname === ruleDomain || urlObj.hostname === `www.${ruleDomain}`;
-        if (hostnameMatch && urlObj.pathname.startsWith(rulePath)) {
-          return rule.folder;
-        }
-      } else {
-        if (urlObj.hostname === domain || urlObj.hostname === `www.${domain}`) {
-          return rule.folder;
-        }
+    for (const rule of parsedRules) {
+      const hostnameMatch = urlObj.hostname === rule.host || urlObj.hostname === `www.${rule.host}`;
+      if (!hostnameMatch) continue;
+      if (rule.pathPrefix === null || urlObj.pathname.startsWith(rule.pathPrefix)) {
+        return rule.folder;
       }
     }
   } catch (err) {
@@ -865,10 +996,53 @@ async function handleGetAISuggestion({ url, title }) {
   };
 }
 
-async function handleMoveBookmark({ bookmarkId, categoryPath }) {
-  const parentId = await ensureFolderPath(categoryPath);
-  await chrome.bookmarks.move(bookmarkId, { parentId });
-  return { success: true };
+/**
+ * Moves a batch of bookmarks into their suggested category folders in one message
+ * round trip. Each distinct categoryPath's folder is resolved via ensureFolderPath()
+ * only once (subsequent items reuse the cached parentId), instead of the inbox page
+ * sending one moveBookmark message — and re-walking/re-creating the same folder path —
+ * per bookmark.
+ * @param {Array<{bookmarkId: string, categoryPath: string}>} items
+ * @returns {Promise<{success: boolean, results: Array<{bookmarkId: string, success: boolean, error?: string}>}>}
+ */
+async function handleMoveBookmarks(items) {
+  const folderIdByPath = new Map();
+  const results = [];
+
+  for (const { bookmarkId, categoryPath } of items) {
+    try {
+      let parentId = folderIdByPath.get(categoryPath);
+      if (!parentId) {
+        parentId = await ensureFolderPath(categoryPath);
+        folderIdByPath.set(categoryPath, parentId);
+      }
+      await chrome.bookmarks.move(bookmarkId, { parentId });
+      results.push({ bookmarkId, success: true });
+    } catch (error) {
+      results.push({ bookmarkId, success: false, error: error.message });
+    }
+  }
+
+  return { success: true, results };
+}
+
+/**
+ * Deletes a batch of bookmarks in one message round trip instead of one
+ * deleteBookmark message per bookmark.
+ * @param {string[]} bookmarkIds
+ * @returns {Promise<{success: boolean, results: Array<{bookmarkId: string, success: boolean, error?: string}>}>}
+ */
+async function handleDeleteBookmarks(bookmarkIds) {
+  const results = [];
+  for (const bookmarkId of bookmarkIds) {
+    try {
+      await chrome.bookmarks.remove(bookmarkId);
+      results.push({ bookmarkId, success: true });
+    } catch (error) {
+      results.push({ bookmarkId, success: false, error: error.message });
+    }
+  }
+  return { success: true, results };
 }
 
 /**
@@ -940,27 +1114,8 @@ chrome.alarms.onAlarm.addListener((alarm) => {
  * @returns {Promise<Object<string, string>>} Map of nodeId -> "Folder/Path"
  */
 async function getFolderPathMap() {
-  await initializeRootIds();
-  const tree = await chrome.bookmarks.getTree();
-  const map = {};
-
-  function traverse(nodes, path = '') {
-    for (const node of nodes) {
-      if (node.url) continue;
-
-      if (node.parentId === '0') {
-        if (node.children) traverse(node.children, '');
-        continue;
-      }
-
-      const currentPath = path ? `${path}/${node.title}` : node.title;
-      if (node.title) map[node.id] = currentPath;
-      if (node.children) traverse(node.children, currentPath);
-    }
-  }
-
-  traverse(tree);
-  return map;
+  const { folderPathMap } = await getBookmarkTreeData();
+  return folderPathMap;
 }
 
 /**
@@ -1060,29 +1215,30 @@ async function handleLocalBookmarkSearch(keywords, dateRange) {
   }
 
   const folderMap = await getFolderPathMap();
+
+  // Hoist date-string parsing out of the per-result loop — the same two bounds apply to every match.
+  const afterMs = dateRange && dateRange.after ? new Date(dateRange.after).getTime() : null;
+  const beforeMs = dateRange && dateRange.before ? new Date(dateRange.before).getTime() : null;
+
+  const trimmedKeywords = keywords.map(k => k.trim()).filter(Boolean);
+
+  // Keyword queries are independent — run them concurrently instead of one at a time.
+  const matchLists = await Promise.all(
+    trimmedKeywords.map(keyword => chrome.bookmarks.search({ query: keyword }))
+  );
+
   const seen = new Set();
   const results = [];
 
-  // Search for each keyword and merge results
-  for (const keyword of keywords) {
-    if (!keyword.trim()) continue;
-    const matches = await chrome.bookmarks.search({ query: keyword });
+  // Merge in keyword order so earlier keywords win ties for the same bookmark, same as before.
+  for (const matches of matchLists) {
     for (const bm of matches) {
       if (!bm.url || seen.has(bm.id)) continue;
       seen.add(bm.id);
 
-      // Apply date filtering
-      if (dateRange) {
-        const added = bm.dateAdded || 0;
-        if (dateRange.after) {
-          const afterMs = new Date(dateRange.after).getTime();
-          if (added < afterMs) continue;
-        }
-        if (dateRange.before) {
-          const beforeMs = new Date(dateRange.before).getTime();
-          if (added > beforeMs) continue;
-        }
-      }
+      const added = bm.dateAdded || 0;
+      if (afterMs !== null && added < afterMs) continue;
+      if (beforeMs !== null && added > beforeMs) continue;
 
       results.push({
         id: bm.id,
@@ -1109,8 +1265,7 @@ async function handleSemanticBookmarkSearch(semanticIntent, excludeIds) {
     return { success: true, results: [] };
   }
 
-  const allBookmarks = await getAllBookmarks();
-  const folderMap = await getFolderPathMap();
+  const { allBookmarks, folderPathMap: folderMap } = await getBookmarkTreeData();
   const excludeSet = new Set(excludeIds || []);
 
   // Filter out already-found bookmarks
@@ -1118,12 +1273,15 @@ async function handleSemanticBookmarkSearch(semanticIntent, excludeIds) {
 
   const BATCH_SIZE = 200;
   const MAX_BATCHES = 3;
-  const allResults = [];
 
+  const batches = [];
   for (let i = 0; i < candidates.length && i < BATCH_SIZE * MAX_BATCHES; i += BATCH_SIZE) {
-    const batch = candidates.slice(i, i + BATCH_SIZE);
+    batches.push(candidates.slice(i, i + BATCH_SIZE));
+  }
 
-    // Build compact bookmark list
+  // Batches are independent AI requests — fire them concurrently instead of paying
+  // up to MAX_BATCHES sequential round trips (each with its own 25s timeout).
+  const batchResponses = await Promise.allSettled(batches.map(batch => {
     const bookmarkData = batch.map(bm => ({
       id: bm.id,
       t: bm.title || '',
@@ -1137,33 +1295,42 @@ Rate each bookmark's relevance (0-10). Return ONLY a JSON array of objects with 
 Bookmarks:
 ${JSON.stringify(bookmarkData)}`;
 
+    return callAI(prompt, settings, provider, 1024);
+  }));
+
+  const allResults = [];
+
+  batchResponses.forEach((response, batchIdx) => {
+    if (response.status !== 'fulfilled') {
+      console.error('Semantic search batch error:', response.reason);
+      return;
+    }
+
+    const jsonMatch = response.value.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) return;
+
     try {
-      const responseText = await callAI(prompt, settings, provider, 1024);
-      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        const scored = JSON.parse(jsonMatch[0]);
-        for (const item of scored) {
-          if (item.score >= 5) {
-            const bm = batch.find(b => b.id === item.id);
-            if (bm) {
-              allResults.push({
-                id: bm.id,
-                title: bm.title,
-                url: bm.url,
-                dateAdded: bm.dateAdded,
-                folderPath: folderMap[bm.parentId] || '',
-                matchType: 'semantic',
-                score: item.score
-              });
-            }
-          }
-        }
+      const scored = JSON.parse(jsonMatch[0]);
+      // Index this batch once so scoring is an O(1) lookup instead of a linear scan per result.
+      const batchById = new Map(batches[batchIdx].map(bm => [bm.id, bm]));
+      for (const item of scored) {
+        if (item.score < 5) continue;
+        const bm = batchById.get(item.id);
+        if (!bm) continue;
+        allResults.push({
+          id: bm.id,
+          title: bm.title,
+          url: bm.url,
+          dateAdded: bm.dateAdded,
+          folderPath: folderMap[bm.parentId] || '',
+          matchType: 'semantic',
+          score: item.score
+        });
       }
     } catch (error) {
-      console.error('Semantic search batch error:', error);
-      // Continue with next batch on error
+      console.error('Semantic search batch parse error:', error);
     }
-  }
+  });
 
   // Sort by score descending
   allResults.sort((a, b) => b.score - a.score);
@@ -1179,21 +1346,8 @@ ${JSON.stringify(bookmarkData)}`;
  * @returns {Promise<chrome.bookmarks.BookmarkTreeNode[]>}
  */
 async function getAllBookmarks() {
-  const tree = await chrome.bookmarks.getTree();
-  const bookmarks = [];
-
-  function traverse(nodes) {
-    for (const node of nodes) {
-      if (node.url) {
-        bookmarks.push(node);
-      } else if (node.children) {
-        traverse(node.children);
-      }
-    }
-  }
-
-  traverse(tree);
-  return bookmarks;
+  const { allBookmarks } = await getBookmarkTreeData();
+  return allBookmarks;
 }
 
 /**
@@ -1239,6 +1393,15 @@ function normalizeUrlForComparison(url) {
 /**
  * Checks a single bookmark for all health issues: dead link, redirect,
  * title change, stale, and domain gone.
+ *
+ * Probes with HEAD first — it carries no body, so it's far cheaper than GET for what
+ * is mostly a liveness + redirect check. A HEAD response is only trusted when it's
+ * successful (<400): plenty of real hosts (bot protection, misconfigured servers)
+ * block or mishandle HEAD specifically while GET works fine, so any HEAD failure or
+ * error status falls back to GET rather than being reported as dead — matching what
+ * the original GET-only check would have determined. GET is also used whenever the
+ * page is HTML and its body is actually needed to compare titles; any other
+ * response's body is drained/aborted without being read.
  * @param {chrome.bookmarks.BookmarkTreeNode} bookmark
  * @param {number} staleDays
  * @returns {Promise<object>}
@@ -1252,43 +1415,57 @@ async function checkSingleBookmark(bookmark, staleDays) {
   const TIMEOUT_MS = 12000;
 
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    let response = await fetchWithTimeout(bookmark.url, 'HEAD', TIMEOUT_MS);
+    let usedHead = !!response;
 
-    const response = await fetch(bookmark.url, {
-      method: 'GET',
-      redirect: 'follow',
-      signal: controller.signal,
-      headers: { 'User-Agent': USER_AGENT }
-    });
-    clearTimeout(timer);
+    if (!response || response.status >= 400) {
+      abortResponseBody(response);
+      response = await fetchWithTimeout(bookmark.url, 'GET', TIMEOUT_MS);
+      usedHead = false;
+    }
 
-    statusCode = response.status;
-
-    if (statusCode === 404 || statusCode === 410) {
-      issues.push('dead');
-    } else if (statusCode >= 400) {
-      issues.push('dead');
+    if (!response) {
+      issues.push('domain_gone');
+      statusCode = 0;
     } else {
-      // Check for redirect: compare final URL to original
-      const finalUrl = response.url;
-      if (finalUrl && normalizeUrlForComparison(finalUrl) !== normalizeUrlForComparison(bookmark.url)) {
-        issues.push('redirect');
-        newUrl = finalUrl;
-      }
+      statusCode = response.status;
 
-      // Extract title from HTML for pages that return HTML
-      const contentType = response.headers.get('content-type') || '';
-      if (contentType.includes('text/html')) {
-        const html = (await response.text()).substring(0, 50000);
-        const liveTitle = extractTitleFromHtml(html);
-        if (liveTitle && liveTitle !== bookmark.title) {
-          newTitle = liveTitle;
-          issues.push('title_changed');
+      if (statusCode === 404 || statusCode === 410 || statusCode >= 400) {
+        issues.push('dead');
+        abortResponseBody(response);
+      } else {
+        // Check for redirect: compare final URL to original
+        const finalUrl = response.url;
+        if (finalUrl && normalizeUrlForComparison(finalUrl) !== normalizeUrlForComparison(bookmark.url)) {
+          issues.push('redirect');
+          newUrl = finalUrl;
+        }
+
+        // Extract title from HTML for pages that return HTML
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('text/html')) {
+          // HEAD never carries a body, so fetch one now if that's what we used.
+          const htmlResponse = usedHead
+            ? await fetchWithTimeout(bookmark.url, 'GET', TIMEOUT_MS)
+            : response;
+          if (htmlResponse) {
+            const html = await readTextUpTo(htmlResponse, 50000);
+            const liveTitle = extractTitleFromHtml(html);
+            if (liveTitle && liveTitle !== bookmark.title) {
+              newTitle = liveTitle;
+              issues.push('title_changed');
+            }
+          }
+        } else {
+          // Not HTML — nothing more to learn from the body, so drain it rather than
+          // leaving it dangling.
+          abortResponseBody(response);
         }
       }
     }
   } catch {
+    // Covers failures that occur after a successful connection (e.g. the connection
+    // dropping mid-body-read) — fetchWithTimeout itself never throws.
     issues.push('domain_gone');
     statusCode = 0;
   }
@@ -1325,8 +1502,33 @@ async function checkSingleBookmark(bookmark, staleDays) {
   };
 }
 
+const HOST_POLITENESS_MS = 150;
+
 /**
- * Runs a full health check on all bookmarks, processing in batches.
+ * Keeps successive requests to the same host at least HOST_POLITENESS_MS apart,
+ * without serialising requests to *different* hosts the way a global inter-batch
+ * sleep did. `hostLastRequestAt` is a Map scoped to a single runHealthCheck() run.
+ */
+async function politenessDelay(url, hostLastRequestAt) {
+  let host;
+  try {
+    host = new URL(url).host;
+  } catch {
+    return;
+  }
+  const now = Date.now();
+  const earliestAllowed = (hostLastRequestAt.get(host) || 0) + HOST_POLITENESS_MS;
+  hostLastRequestAt.set(host, Math.max(now, earliestAllowed));
+  if (earliestAllowed > now) {
+    await new Promise(resolve => setTimeout(resolve, earliestAllowed - now));
+  }
+}
+
+/**
+ * Runs a full health check on all bookmarks using a fixed-size worker pool: N workers
+ * pull the next bookmark off a shared index instead of running in lock-step batches, so
+ * one slow/hanging host costs a single worker slot (up to its own timeout) rather than
+ * stalling the rest of a batch for the full timeout.
  * Stores progress and results in chrome.storage.local.
  * @returns {Promise<{ success: boolean, summary: object }>}
  */
@@ -1341,24 +1543,39 @@ async function runHealthCheck() {
     healthCheckProgress: { inProgress: true, current: 0, total }
   });
 
-  const results = [];
-  const BATCH_SIZE = 5;
+  const results = new Array(total);
+  const hostLastRequestAt = new Map();
 
-  for (let i = 0; i < bookmarks.length; i += BATCH_SIZE) {
-    const batch = bookmarks.slice(i, i + BATCH_SIZE);
-    const batchResults = await Promise.all(batch.map(bm => checkSingleBookmark(bm, staleDays)));
-    results.push(...batchResults);
+  let nextIndex = 0;
+  let completed = 0;
+  let lastProgressWriteAt = 0;
+  const PROGRESS_WRITE_INTERVAL_MS = 500;
 
-    const current = Math.min(i + BATCH_SIZE, total);
+  // Progress writes are throttled — the UI only polls/listens every ~500ms anyway,
+  // so writing (and broadcasting onChanged) more often than that is pure waste.
+  async function writeProgress() {
+    const now = Date.now();
+    if (now - lastProgressWriteAt < PROGRESS_WRITE_INTERVAL_MS) return;
+    lastProgressWriteAt = now;
     await chrome.storage.local.set({
-      healthCheckProgress: { inProgress: true, current, total }
+      healthCheckProgress: { inProgress: true, current: completed, total }
     });
+  }
 
-    // Brief pause between batches to avoid overwhelming remote servers
-    if (i + BATCH_SIZE < bookmarks.length) {
-      await new Promise(resolve => setTimeout(resolve, 150));
+  async function worker() {
+    while (true) {
+      const i = nextIndex++;
+      if (i >= total) return;
+      await politenessDelay(bookmarks[i].url, hostLastRequestAt);
+      results[i] = await checkSingleBookmark(bookmarks[i], staleDays);
+      completed++;
+      await writeProgress();
     }
   }
+
+  const CONCURRENCY = 15;
+  const workerCount = Math.min(CONCURRENCY, total);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
 
   const summary = {
     total: results.length,
@@ -1370,8 +1587,9 @@ async function runHealthCheck() {
     ok: results.filter(r => r.issues.length === 0).length
   };
 
+  await saveHealthCheckResults(results, summary);
+
   await chrome.storage.local.set({
-    healthCheckResults: { lastRun: new Date().toISOString(), results, summary },
     healthCheckProgress: { inProgress: false, current: total, total }
   });
 
@@ -1379,7 +1597,64 @@ async function runHealthCheck() {
 }
 
 /**
- * Applies a fix action to a single bookmark and updates stored results.
+ * Health check results are stored one small key per bookmark (`hce_<id>`) plus a
+ * `healthCheckMeta` index ({lastRun, summary, ids}), instead of one big array under a
+ * single key. A single-bookmark fix then only has to rewrite its own tiny entry (and,
+ * for deletes, the small id list) rather than re-serialising the entire result set —
+ * the dominant cost for large bookmark collections.
+ */
+function healthCheckEntryKey(id) {
+  return `hce_${id}`;
+}
+
+/**
+ * Persists a freshly computed set of health-check results in the keyed layout,
+ * clearing out entries left over from a previous run that no longer apply.
+ */
+async function saveHealthCheckResults(results, summary) {
+  const prevStored = await chrome.storage.local.get('healthCheckMeta');
+  const prevIds = (prevStored.healthCheckMeta && prevStored.healthCheckMeta.ids) || [];
+  const newIds = results.map(r => r.id);
+  const newIdSet = new Set(newIds);
+  const staleKeys = prevIds.filter(id => !newIdSet.has(id)).map(healthCheckEntryKey);
+
+  if (staleKeys.length > 0) {
+    await chrome.storage.local.remove(staleKeys);
+  }
+
+  const entries = {};
+  for (const r of results) entries[healthCheckEntryKey(r.id)] = r;
+
+  await chrome.storage.local.set({
+    ...entries,
+    healthCheckMeta: { lastRun: new Date().toISOString(), summary, ids: newIds }
+  });
+}
+
+/**
+ * Reconstructs the {healthCheckResults: {lastRun, summary, results}, healthCheckProgress}
+ * shape the UI expects from the keyed storage layout: one read for the meta/progress
+ * index, one batched read for every entry it references.
+ */
+async function getHealthCheckData() {
+  const stored = await chrome.storage.local.get(['healthCheckMeta', 'healthCheckProgress']);
+  const meta = stored.healthCheckMeta;
+  if (!meta) {
+    return { healthCheckProgress: stored.healthCheckProgress };
+  }
+
+  const entryKeys = meta.ids.map(healthCheckEntryKey);
+  const entriesById = entryKeys.length > 0 ? await chrome.storage.local.get(entryKeys) : {};
+  const results = meta.ids.map(id => entriesById[healthCheckEntryKey(id)]).filter(Boolean);
+
+  return {
+    healthCheckResults: { lastRun: meta.lastRun, summary: meta.summary, results },
+    healthCheckProgress: stored.healthCheckProgress
+  };
+}
+
+/**
+ * Applies a fix action to a single bookmark and updates its stored result entry.
  * @param {string} bookmarkId
  * @param {'updateUrl'|'updateTitle'|'delete'} fixType
  * @param {string} [newValue]
@@ -1394,21 +1669,24 @@ async function applyHealthFix(bookmarkId, fixType, newValue) {
       await chrome.bookmarks.remove(bookmarkId);
     }
 
-    // Reflect the fix in stored results
-    const stored = await chrome.storage.local.get('healthCheckResults');
-    if (stored.healthCheckResults) {
-      const { results } = stored.healthCheckResults;
-      const idx = results.findIndex(r => r.id === bookmarkId);
-      if (idx >= 0) {
-        if (fixType === 'delete') {
-          results.splice(idx, 1);
-          stored.healthCheckResults.summary.total = Math.max(0, stored.healthCheckResults.summary.total - 1);
-        } else {
-          results[idx].fixed = true;
-          if (fixType === 'updateUrl') results[idx].url = newValue;
-          if (fixType === 'updateTitle') results[idx].title = newValue;
+    const metaStored = await chrome.storage.local.get('healthCheckMeta');
+    const meta = metaStored.healthCheckMeta;
+    if (meta) {
+      const entryKey = healthCheckEntryKey(bookmarkId);
+      if (fixType === 'delete') {
+        await chrome.storage.local.remove(entryKey);
+        meta.ids = meta.ids.filter(id => id !== bookmarkId);
+        meta.summary.total = Math.max(0, meta.summary.total - 1);
+        await chrome.storage.local.set({ healthCheckMeta: meta });
+      } else {
+        const entryStored = await chrome.storage.local.get(entryKey);
+        const entry = entryStored[entryKey];
+        if (entry) {
+          entry.fixed = true;
+          if (fixType === 'updateUrl') entry.url = newValue;
+          if (fixType === 'updateTitle') entry.title = newValue;
+          await chrome.storage.local.set({ [entryKey]: entry });
         }
-        await chrome.storage.local.set({ healthCheckResults: stored.healthCheckResults });
       }
     }
 
@@ -1419,40 +1697,55 @@ async function applyHealthFix(bookmarkId, fixType, newValue) {
 }
 
 /**
- * Applies a bulk fix to multiple bookmarks of a specific issue type.
+ * Applies a bulk fix to multiple bookmarks of a specific issue type. Entries are read
+ * and written by key in two batched calls (not one chrome.storage round trip per id),
+ * and matched with a Map/object lookup instead of a findIndex/find scan per id —
+ * replacing the previous O(n·m) behaviour with O(n).
  * @param {'deleteAllDead'|'fixAllRedirects'|'dismissAllStale'|'deleteAllStale'|'updateAllTitles'} fixType
  * @param {string[]} ids
  */
 async function applyBulkFix(fixType, ids) {
-  const stored = await chrome.storage.local.get('healthCheckResults');
-  if (!stored.healthCheckResults) return { success: true };
+  const metaStored = await chrome.storage.local.get('healthCheckMeta');
+  const meta = metaStored.healthCheckMeta;
+  if (!meta) return { success: true };
 
-  const { results } = stored.healthCheckResults;
+  const entryKeys = ids.map(healthCheckEntryKey);
+  const entriesById = await chrome.storage.local.get(entryKeys);
+
+  const toSet = {};
+  const toRemoveKeys = [];
+  const deletedIds = new Set();
   let modified = false;
 
   for (const id of ids) {
+    const key = healthCheckEntryKey(id);
+    const entry = entriesById[key];
     try {
       if (fixType === 'deleteAllDead' || fixType === 'deleteAllStale') {
         await chrome.bookmarks.remove(id);
-        const idx = results.findIndex(r => r.id === id);
-        if (idx >= 0) { results.splice(idx, 1); modified = true; }
+        toRemoveKeys.push(key);
+        deletedIds.add(id);
+        modified = true;
       } else if (fixType === 'fixAllRedirects') {
-        const entry = results.find(r => r.id === id);
         if (entry && entry.newUrl) {
           await chrome.bookmarks.update(id, { url: entry.newUrl });
           entry.fixed = true;
           entry.url = entry.newUrl;
+          toSet[key] = entry;
           modified = true;
         }
       } else if (fixType === 'dismissAllStale') {
-        const entry = results.find(r => r.id === id);
-        if (entry) { entry.dismissed = true; modified = true; }
+        if (entry) {
+          entry.dismissed = true;
+          toSet[key] = entry;
+          modified = true;
+        }
       } else if (fixType === 'updateAllTitles') {
-        const entry = results.find(r => r.id === id);
         if (entry && entry.newTitle) {
           await chrome.bookmarks.update(id, { title: entry.newTitle });
           entry.fixed = true;
           entry.title = entry.newTitle;
+          toSet[key] = entry;
           modified = true;
         }
       }
@@ -1462,8 +1755,15 @@ async function applyBulkFix(fixType, ids) {
   }
 
   if (modified) {
-    stored.healthCheckResults.summary.total = results.length;
-    await chrome.storage.local.set({ healthCheckResults: stored.healthCheckResults });
+    if (Object.keys(toSet).length > 0) {
+      await chrome.storage.local.set(toSet);
+    }
+    if (toRemoveKeys.length > 0) {
+      await chrome.storage.local.remove(toRemoveKeys);
+      meta.ids = meta.ids.filter(id => !deletedIds.has(id));
+    }
+    meta.summary.total = meta.ids.length;
+    await chrome.storage.local.set({ healthCheckMeta: meta });
   }
 
   return { success: true };
@@ -1474,13 +1774,12 @@ async function applyBulkFix(fixType, ids) {
  * @param {string} bookmarkId
  */
 async function dismissHealthIssue(bookmarkId) {
-  const stored = await chrome.storage.local.get('healthCheckResults');
-  if (stored.healthCheckResults) {
-    const idx = stored.healthCheckResults.results.findIndex(r => r.id === bookmarkId);
-    if (idx >= 0) {
-      stored.healthCheckResults.results[idx].dismissed = true;
-      await chrome.storage.local.set({ healthCheckResults: stored.healthCheckResults });
-    }
+  const entryKey = healthCheckEntryKey(bookmarkId);
+  const stored = await chrome.storage.local.get(entryKey);
+  const entry = stored[entryKey];
+  if (entry) {
+    entry.dismissed = true;
+    await chrome.storage.local.set({ [entryKey]: entry });
   }
   return { success: true };
 }

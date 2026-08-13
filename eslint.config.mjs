@@ -20,6 +20,7 @@ export default [
         setInterval: 'readonly',
         clearInterval: 'readonly',
         AbortController: 'readonly',
+        TextDecoder: 'readonly',
         confirm: 'readonly',
         alert: 'readonly',
         importScripts: 'readonly',

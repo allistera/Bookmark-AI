@@ -92,9 +92,12 @@ function renderResults(results) {
   header.textContent = `Found ${results.length} bookmark${results.length !== 1 ? 's' : ''}`;
   resultsContainer.appendChild(header);
 
+  // Build off-DOM and append once instead of one reflow-triggering append per card.
+  const fragment = document.createDocumentFragment();
   for (const entry of results) {
-    resultsContainer.appendChild(buildResultCard(entry));
+    fragment.appendChild(buildResultCard(entry));
   }
+  resultsContainer.appendChild(fragment);
 }
 
 async function handleSearch() {
