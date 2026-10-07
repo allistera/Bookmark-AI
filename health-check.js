@@ -99,17 +99,20 @@ async function loadResults() {
   }
 
   currentResults = data.healthCheckResults;
-  renderSummary(currentResults.summary, currentResults.lastRun);
+  renderSummary(currentResults.results, currentResults.lastRun);
   renderResults(currentResults.results);
 }
 
-function renderSummary(summary, lastRun) {
-  document.getElementById('sumDead').textContent = summary.dead || 0;
-  document.getElementById('sumDomainGone').textContent = summary.domainGone || 0;
-  document.getElementById('sumRedirected').textContent = summary.redirected || 0;
-  document.getElementById('sumStale').textContent = summary.stale || 0;
-  document.getElementById('sumTitleChanged').textContent = summary.titleChanged || 0;
-  document.getElementById('sumOk').textContent = summary.ok || 0;
+// Counts are derived from the live entries with the same predicates as the list
+// filters, so they drop as items are fixed, deleted or dismissed instead of showing
+// the totals frozen at the end of the last run.
+function renderSummary(results, lastRun) {
+  document.getElementById('sumDead').textContent = filterResults(results, 'dead').length;
+  document.getElementById('sumDomainGone').textContent = filterResults(results, 'domain_gone').length;
+  document.getElementById('sumRedirected').textContent = filterResults(results, 'redirect').length;
+  document.getElementById('sumStale').textContent = filterResults(results, 'stale').length;
+  document.getElementById('sumTitleChanged').textContent = filterResults(results, 'title_changed').length;
+  document.getElementById('sumOk').textContent = filterResults(results, 'ok').length;
 
   if (lastRun) {
     const d = new Date(lastRun);
@@ -153,15 +156,15 @@ function filterResults(results, filter) {
   case 'issues':
     return results.filter(r => r.issues.length > 0 && !r.dismissed && !r.fixed);
   case 'dead':
-    return results.filter(r => r.issues.includes('dead') && !r.dismissed);
+    return results.filter(r => r.issues.includes('dead') && !r.dismissed && !r.fixed);
   case 'domain_gone':
-    return results.filter(r => r.issues.includes('domain_gone') && !r.dismissed);
+    return results.filter(r => r.issues.includes('domain_gone') && !r.dismissed && !r.fixed);
   case 'redirect':
-    return results.filter(r => r.issues.includes('redirect') && !r.dismissed);
+    return results.filter(r => r.issues.includes('redirect') && !r.dismissed && !r.fixed);
   case 'stale':
-    return results.filter(r => r.issues.includes('stale') && !r.dismissed);
+    return results.filter(r => r.issues.includes('stale') && !r.dismissed && !r.fixed);
   case 'title_changed':
-    return results.filter(r => r.issues.includes('title_changed') && !r.dismissed);
+    return results.filter(r => r.issues.includes('title_changed') && !r.dismissed && !r.fixed);
   case 'ok':
     return results.filter(r => r.issues.length === 0 || r.fixed);
   default:
@@ -360,7 +363,7 @@ async function refreshResults() {
   const data = await chrome.runtime.sendMessage({ action: 'getHealthCheckData' });
   if (data.healthCheckResults) {
     currentResults = data.healthCheckResults;
-    renderSummary(currentResults.summary, currentResults.lastRun);
+    renderSummary(currentResults.results, currentResults.lastRun);
     renderResults(currentResults.results);
   }
 }

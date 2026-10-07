@@ -200,10 +200,13 @@ async function loadSettings() {
 
     document.getElementById('anthropicApiKey').value = settings.anthropicApiKey;
     document.getElementById('openaiApiKey').value = settings.openaiApiKey;
-    document.getElementById('openaiModel').value = settings.openaiModel || 'gpt-4o';
+    setSelectValue(document.getElementById('openaiModel'), settings.openaiModel || 'gpt-4o');
     document.getElementById('openrouterApiKey').value = settings.openrouterApiKey;
+    // Seed the saved model before the (network-dependent) model list loads, so an
+    // auto-save that fires while offline doesn't persist an empty selection.
+    setSelectValue(document.getElementById('openrouterModel'), settings.openrouterModel);
     document.getElementById('geminiApiKey').value = settings.geminiApiKey || '';
-    document.getElementById('geminiModel').value = settings.geminiModel || 'gemini-2.5-flash';
+    setSelectValue(document.getElementById('geminiModel'), settings.geminiModel || 'gemini-2.5-flash');
     document.getElementById('instapaperUsername').value = settings.instapaperUsername;
     document.getElementById('instapaperPassword').value = settings.instapaperPassword;
     document.getElementById('todoistApiToken').value = settings.todoistApiToken;
@@ -293,11 +296,10 @@ async function loadOpenRouterModels(preselectedModel = null) {
       const option = document.createElement('option');
       option.value = model.id;
       option.textContent = model.name || model.id;
-      if (currentValue && model.id === currentValue) {
-        option.selected = true;
-      }
       select.appendChild(option);
     }
+    // Keeps the saved model selected even if it no longer appears in the list.
+    if (currentValue) setSelectValue(select, currentValue);
 
     showStatus(`Loaded ${models.length} models`, 'success');
     setTimeout(hideStatus, 3000);
@@ -421,6 +423,22 @@ async function saveSettings(event = null) {
 }
 
 
+
+/**
+ * Selects `value` in a <select>, adding it as an option if it isn't listed. Setting
+ * `.value` to an unknown option silently leaves nothing selected, and the next
+ * auto-save would then overwrite the stored setting with an empty string.
+ */
+function setSelectValue(select, value) {
+  if (!value) return;
+  if (![...select.options].some(opt => opt.value === value)) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = value;
+    select.appendChild(option);
+  }
+  select.value = value;
+}
 
 function showStatus(message, type) {
   const statusDiv = document.getElementById('status');

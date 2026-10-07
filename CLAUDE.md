@@ -14,9 +14,10 @@ npm run build
 
 # Rebuild icons (requires Sharp; run after changing SVG source)
 npm run build:icons
-```
 
-No test suite is configured.
+# Tests (Node's built-in runner; background.js is eval'd with a stubbed chrome API)
+npm test
+```
 
 ## Architecture
 

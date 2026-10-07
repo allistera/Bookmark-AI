@@ -400,10 +400,12 @@ async function callAI(prompt, settings, provider, maxTokens = 1024) {
       let response;
       try {
         const model = settings.geminiModel || 'gemini-2.5-flash';
-        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${settings.geminiApiKey}`, {
+        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            // Header rather than ?key= so the key never lands in URL-level logs/history.
+            'x-goog-api-key': settings.geminiApiKey
           },
           body: JSON.stringify({
             contents: [
@@ -467,7 +469,7 @@ async function callAI(prompt, settings, provider, maxTokens = 1024) {
       }
 
       const message = await response.json();
-      const textContent = message.content.find(block => block.type === 'text');
+      const textContent = (message.content || []).find(block => block.type === 'text');
       if (!textContent) {
         console.error('No text content in Claude response. Response:', JSON.stringify(message.content));
         throw new Error('No text content in Claude response');
@@ -808,6 +810,11 @@ async function handleAnalyzeBookmark({ url, title, saveToInstapaper: saveToInsta
       ? { isArticle: false, contentType: 'page', title: title || url, summary: '', categories: [], matchedCategory: ruleFolder }
       : await analyzeBookmark(url, settings, provider, title);
 
+    // The AI occasionally omits the title; fall back to the tab title (or the URL)
+    // so integrations don't receive the literal string "undefined".
+    analysis.title = analysis.title || title || url;
+    analysis.summary = analysis.summary || '';
+
     // Fire all integrations concurrently — they are fully independent
     const [instapaperResult, todoistResult, thingsResult, readwiseResult, raindropResult] = await Promise.all([
       (saveToInstapaperOption && analysis.isArticle && settings.instapaperUsername && settings.instapaperPassword)
@@ -1081,10 +1088,14 @@ async function getOrCreateFolder(title, parentId) {
 
 // Add context menu item for right-click bookmarking
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: 'bookmark-ai',
-    title: 'Analyze and Bookmark with AI',
-    contexts: ['page']
+  // Menu items persist across reloads/updates, so clear first to avoid the
+  // "Cannot create item with duplicate id" error on every update.
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: 'bookmark-ai',
+      title: 'Analyze and Bookmark with AI',
+      contexts: ['page']
+    });
   });
   // Set up health check alarm based on saved settings
   setupHealthCheckAlarm().catch(console.error);
@@ -1390,90 +1401,81 @@ function normalizeUrlForComparison(url) {
   }
 }
 
+const DEFAULT_HEALTH_CHECK_TYPES = { dead: true, domainGone: true, redirects: true, stale: true, titleChanged: true };
+
 /**
- * Checks a single bookmark for all health issues: dead link, redirect,
+ * Checks a single bookmark for the enabled health issues: dead link, redirect,
  * title change, stale, and domain gone.
  *
- * Probes with HEAD first — it carries no body, so it's far cheaper than GET for what
- * is mostly a liveness + redirect check. A HEAD response is only trusted when it's
- * successful (<400): plenty of real hosts (bot protection, misconfigured servers)
- * block or mishandle HEAD specifically while GET works fine, so any HEAD failure or
- * error status falls back to GET rather than being reported as dead — matching what
- * the original GET-only check would have determined. GET is also used whenever the
- * page is HTML and its body is actually needed to compare titles; any other
- * response's body is drained/aborted without being read.
+ * A single streamed GET answers every question at once: the status code (dead),
+ * the final URL (redirect) and, for HTML, the first chunk of the body (title). Only
+ * as much of the body as the title check needs is read before the transfer is
+ * cancelled, so this stays cheap for large pages and binary resources. A HEAD-first
+ * probe was dropped because almost every bookmark is HTML, which made it two round
+ * trips per bookmark, and because many hosts reject HEAD outright.
  * @param {chrome.bookmarks.BookmarkTreeNode} bookmark
  * @param {number} staleDays
+ * @param {typeof DEFAULT_HEALTH_CHECK_TYPES} [types] - which checks the user enabled
  * @returns {Promise<object>}
  */
-async function checkSingleBookmark(bookmark, staleDays) {
+async function checkSingleBookmark(bookmark, staleDays, types = DEFAULT_HEALTH_CHECK_TYPES) {
   const issues = [];
   let newUrl = null;
   let newTitle = null;
   let statusCode = null;
 
   const TIMEOUT_MS = 12000;
+  const needsNetwork = types.dead || types.domainGone || types.redirects || types.titleChanged;
 
-  try {
-    let response = await fetchWithTimeout(bookmark.url, 'HEAD', TIMEOUT_MS);
-    let usedHead = !!response;
+  if (needsNetwork) {
+    try {
+      const response = await fetchWithTimeout(bookmark.url, 'GET', TIMEOUT_MS);
 
-    if (!response || response.status >= 400) {
-      abortResponseBody(response);
-      response = await fetchWithTimeout(bookmark.url, 'GET', TIMEOUT_MS);
-      usedHead = false;
-    }
-
-    if (!response) {
-      issues.push('domain_gone');
-      statusCode = 0;
-    } else {
-      statusCode = response.status;
-
-      if (statusCode === 404 || statusCode === 410 || statusCode >= 400) {
-        issues.push('dead');
-        abortResponseBody(response);
+      if (!response) {
+        if (types.domainGone) issues.push('domain_gone');
+        statusCode = 0;
       } else {
-        // Check for redirect: compare final URL to original
-        const finalUrl = response.url;
-        if (finalUrl && normalizeUrlForComparison(finalUrl) !== normalizeUrlForComparison(bookmark.url)) {
-          issues.push('redirect');
-          newUrl = finalUrl;
-        }
+        statusCode = response.status;
 
-        // Extract title from HTML for pages that return HTML
-        const contentType = response.headers.get('content-type') || '';
-        if (contentType.includes('text/html')) {
-          // HEAD never carries a body, so fetch one now if that's what we used.
-          const htmlResponse = usedHead
-            ? await fetchWithTimeout(bookmark.url, 'GET', TIMEOUT_MS)
-            : response;
-          if (htmlResponse) {
-            const html = await readTextUpTo(htmlResponse, 50000);
+        if (statusCode >= 400) {
+          if (types.dead) issues.push('dead');
+          abortResponseBody(response);
+        } else {
+          // Check for redirect: compare final URL to original
+          const finalUrl = response.url;
+          if (types.redirects && finalUrl
+              && normalizeUrlForComparison(finalUrl) !== normalizeUrlForComparison(bookmark.url)) {
+            issues.push('redirect');
+            newUrl = finalUrl;
+          }
+
+          // Extract title from HTML for pages that return HTML
+          const contentType = response.headers.get('content-type') || '';
+          if (types.titleChanged && contentType.includes('text/html')) {
+            const html = await readTextUpTo(response, 50000);
             const liveTitle = extractTitleFromHtml(html);
             if (liveTitle && liveTitle !== bookmark.title) {
               newTitle = liveTitle;
               issues.push('title_changed');
             }
+          } else {
+            // Body not needed — drain it rather than leaving it dangling.
+            abortResponseBody(response);
           }
-        } else {
-          // Not HTML — nothing more to learn from the body, so drain it rather than
-          // leaving it dangling.
-          abortResponseBody(response);
         }
       }
+    } catch {
+      // Covers failures that occur after a successful connection (e.g. the connection
+      // dropping mid-body-read) — fetchWithTimeout itself never throws.
+      if (types.domainGone) issues.push('domain_gone');
+      statusCode = 0;
     }
-  } catch {
-    // Covers failures that occur after a successful connection (e.g. the connection
-    // dropping mid-body-read) — fetchWithTimeout itself never throws.
-    issues.push('domain_gone');
-    statusCode = 0;
   }
 
   // Staleness: use dateLastUsed if available, else dateAdded
   const cutoffMs = staleDays * 24 * 60 * 60 * 1000;
   const lastActivity = bookmark.dateLastUsed || bookmark.dateAdded || 0;
-  if (lastActivity && (Date.now() - lastActivity) > cutoffMs) {
+  if (types.stale && lastActivity && (Date.now() - lastActivity) > cutoffMs) {
     issues.push('stale');
   }
 
@@ -1533,8 +1535,12 @@ async function politenessDelay(url, hostLastRequestAt) {
  * @returns {Promise<{ success: boolean, summary: object }>}
  */
 async function runHealthCheck() {
-  const settings = await chrome.storage.sync.get({ healthCheckStaleDays: 365 });
+  const settings = await chrome.storage.sync.get({
+    healthCheckStaleDays: 365,
+    healthCheckTypes: DEFAULT_HEALTH_CHECK_TYPES
+  });
   const staleDays = settings.healthCheckStaleDays;
+  const types = { ...DEFAULT_HEALTH_CHECK_TYPES, ...settings.healthCheckTypes };
 
   const bookmarks = await getAllBookmarks();
   const total = bookmarks.length;
@@ -1567,7 +1573,7 @@ async function runHealthCheck() {
       const i = nextIndex++;
       if (i >= total) return;
       await politenessDelay(bookmarks[i].url, hostLastRequestAt);
-      results[i] = await checkSingleBookmark(bookmarks[i], staleDays);
+      results[i] = await checkSingleBookmark(bookmarks[i], staleDays, types);
       completed++;
       await writeProgress();
     }

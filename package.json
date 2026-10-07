@@ -7,6 +7,7 @@
   "scripts": {
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "test": "node --test tests/",
     "build:icons": "node scripts/build-icons.mjs",
     "version:patch": "node scripts/bump-version.mjs patch",
     "version:minor": "node scripts/bump-version.mjs minor",
@@ -14,8 +15,8 @@
     "build": "zip -r bookmark-ai.zip manifest.json background.js popup.html popup.js options.html options.js health-check.html health-check.js search.html search.js inbox.html inbox.js icons/ README.md -x '*.DS_Store'"
   },
   "devDependencies": {
-    "eslint": "^10.9.0",
-    "sharp": "^0.35.3"
+    "eslint": "^10.12.0",
+    "sharp": "^0.35.5"
   },
   "repository": {
     "type": "git",
